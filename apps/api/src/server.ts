@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { env } from './config/env.js';
 import { requestContextPlugin } from './plugins/request-context.js';
+import { redisPlugin } from './plugins/redis.js';
 import { authPlugin } from './plugins/auth.js';
 import { registerRoutes } from './routes/index.js';
 
@@ -25,6 +26,7 @@ async function main() {
   });
 
   await fastify.register(requestContextPlugin);
+  await fastify.register(redisPlugin);
   await fastify.register(authPlugin);
 
   // Global error handler

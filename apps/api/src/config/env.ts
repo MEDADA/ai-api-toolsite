@@ -8,7 +8,7 @@ const envSchema = z.object({
   ADMIN_URL: z.string().url().default('http://localhost:3002'),
 
   // Database
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().default('postgresql://dev:dev123@localhost:5432/ai_toolsite'),
 
   // Redis
   REDIS_HOST: z.string().default('localhost'),
@@ -17,17 +17,17 @@ const envSchema = z.object({
   REDIS_DB: z.coerce.number().default(0),
 
   // JWT
-  JWT_SECRET: z.string().min(32),
-  JWT_REFRESH_SECRET: z.string().min(32),
+  JWT_SECRET: z.string().min(8).default('dev-jwt-secret-change-in-production-32chars'),
+  JWT_REFRESH_SECRET: z.string().min(8).default('dev-refresh-secret-change-in-production'),
   JWT_ACCESS_EXPIRES: z.string().default('2h'),
   JWT_REFRESH_EXPIRES: z.string().default('30d'),
 
   // OSS
-  OSS_REGION: z.string(),
-  OSS_ACCESS_KEY_ID: z.string(),
-  OSS_ACCESS_KEY_SECRET: z.string(),
-  OSS_BUCKET: z.string(),
-  OSS_STS_ROLE_ARN: z.string(),
+  OSS_REGION: z.string().default('oss-cn-shanghai'),
+  OSS_ACCESS_KEY_ID: z.string().optional(),
+  OSS_ACCESS_KEY_SECRET: z.string().optional(),
+  OSS_BUCKET: z.string().optional(),
+  OSS_STS_ROLE_ARN: z.string().optional(),
 
   // CORS
   CORS_ORIGINS: z.string().default('http://localhost:3000,http://localhost:3002'),
@@ -53,6 +53,18 @@ const envSchema = z.object({
   // OAuth
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+  // Alipay
+  ALIPAY_APP_ID: z.string().optional(),
+  ALIPAY_PRIVATE_KEY: z.string().optional(),
+  ALIPAY_PUBLIC_KEY: z.string().optional(),
+  ALIPAY_NOTIFY_URL: z.string().optional(),
+
+  // WeChat Pay
+  WECHAT_MCH_ID: z.string().optional(),
+  WECHAT_API_KEY: z.string().optional(),
+  WECHAT_CERT_PATH: z.string().optional(),
+  WECHAT_NOTIFY_URL: z.string().optional(),
 
   // Log
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
