@@ -1,0 +1,532 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum UserLevel {
+  NORMAL
+  MONTHLY
+  YEARLY
+}
+
+enum IdentityType {
+  PHONE
+  EMAIL
+  GOOGLE
+  APPLE
+}
+
+enum SessionStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum WalletTxType {
+  RECHARGE
+  GIFT_CREDIT
+  TASK_FREEZE
+  TASK_SETTLE
+  TASK_REFUND
+  MEMBERSHIP_PURCHASE
+  MANUAL_ADJUSTMENT
+}
+
+enum RechargeStatus {
+  PENDING
+  PAID
+  REFUNDING
+  REFUNDED
+  EXPIRED
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum TaskType {
+  IMAGE
+  VIDEO
+  AUDIO
+  TTS
+  ASR
+  VOICE_CLONE
+}
+
+enum TaskStatus {
+  CREATED
+  QUEUED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum ModelType {
+  IMAGE
+  VIDEO
+  TTS
+  ASR
+  VOICE_CLONE
+}
+
+enum ProviderType {
+  REPLICATE
+  FAL_AI
+  ALIYUN_BAILIAN
+  VOLCENGINE
+  KAISHI_KV
+  OPENAI_PROXY
+}
+
+enum ChannelStatus {
+  ACTIVE
+  RATE_LIMITED
+  DISABLED
+}
+
+enum ReviewStatus {
+  PASSED
+  BLOCKED
+  PENDING
+  ERROR
+}
+
+enum RiskLevel {
+  SAFE
+  SUSPICIOUS
+  BLOCKED
+}
+
+enum OssObjectType {
+  UPLOAD
+  RESULT
+  THUMBNAIL
+}
+
+// ============================================================
+// User & Auth
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  phone         String?   @unique
+  email         String?   @unique
+  nickname      String?
+  avatar        String?
+  level         UserLevel @default(NORMAL)
+  gift_credit   Boolean   @default(false)
+  member_expire DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  deleted_at    DateTime?
+
+  identities       UserIdentity[]
+  sessions         UserSession[]
+  wallet           WalletAccount?
+  recharge_orders  RechargeOrder[]
+  membership_orders MembershipOrder[]
+  tasks            GenerationTask[]
+  assets           UserAsset[]
+  favorites        Favorite[]
+  ledger           WalletLedger[]
+
+  @@index([created_at])
+  @@map("users")
+}
+
+model UserIdentity {
+  id           String        @id @default(cuid())
+  user_id      String
+  type         IdentityType
+  identifier   String
+  oauth_data   Json?
+  created_at   DateTime     @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([type, identifier])
+  @@index([user_id])
+  @@map("user_identity")
+}
+
+model UserSession {
+  id            String        @id @default(cuid())
+  user_id       String
+  refresh_token String        @unique
+  device_info   String?
+  ip_address    String?
+  status        SessionStatus @default(ACTIVE)
+  expires_at    DateTime
+  created_at    DateTime      @default(now())
+  revoked_at    DateTime?
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@map("user_session")
+}
+
+// ============================================================
+// Wallet System
+// ============================================================
+
+model WalletAccount {
+  id                 String   @id @default(cuid())
+  user_id            String   @unique
+  available_balance  Decimal  @default(0) @db.Decimal(10, 2)
+  frozen_balance     Decimal  @default(0) @db.Decimal(10, 2)
+  total_recharged    Decimal  @default(0) @db.Decimal(12, 2)
+  total_spent        Decimal  @default(0) @db.Decimal(12, 2)
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+
+  user   User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  ledger WalletLedger[]
+
+  @@map("wallet_account")
+}
+
+model WalletLedger {
+  id             String       @id @default(cuid())
+  wallet_id      String
+  user_id        String
+  tx_type        WalletTxType
+  amount         Decimal      @db.Decimal(10, 2)
+  balance_before Decimal      @db.Decimal(10, 2)
+  balance_after  Decimal      @db.Decimal(10, 2)
+  order_id       String?
+  order_type     String?
+  remark         String?
+  created_at     DateTime     @default(now())
+
+  wallet WalletAccount @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+  user   User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, created_at])
+  @@index([wallet_id])
+  @@index([order_id])
+  @@map("wallet_ledger")
+}
+
+model RechargeOrder {
+  id            String         @id @default(cuid())
+  user_id       String
+  order_no      String         @unique
+  amount        Decimal        @db.Decimal(10, 2)
+  gift_amount   Decimal        @default(0) @db.Decimal(10, 2)
+  pay_amount    Decimal        @db.Decimal(10, 2)
+  pay_method    String
+  trade_no      String?
+  status        RechargeStatus @default(PENDING)
+  paid_at       DateTime?
+  expired_at    DateTime
+  refund_amount Decimal?       @db.Decimal(10, 2)
+  refund_at     DateTime?
+  created_at    DateTime       @default(now())
+  updated_at    DateTime       @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([status])
+  @@index([created_at])
+  @@map("recharge_order")
+}
+
+model MembershipOrder {
+  id         String           @id @default(cuid())
+  user_id    String
+  order_no   String           @unique
+  level      UserLevel
+  amount     Decimal          @db.Decimal(10, 2)
+  pay_method String
+  trade_no   String?
+  status     MembershipStatus @default(PENDING)
+  start_at   DateTime?
+  end_at     DateTime?
+  created_at DateTime         @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("membership_order")
+}
+
+// ============================================================
+// Models & Pricing
+// ============================================================
+
+model Model {
+  id           String      @id @default(cuid())
+  slug         String      @unique
+  name         String
+  type         ModelType
+  provider     ProviderType
+  channel_id   String?
+  description  String?
+  capability   Json
+  config       Json?
+  is_active    Boolean     @default(true)
+  sort_order   Int         @default(0)
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+
+  pricing ModelPricing[]
+  tasks   GenerationTask[]
+
+  @@index([type])
+  @@index([is_active])
+  @@map("model")
+}
+
+model ModelPricing {
+  id             String    @id @default(cuid())
+  model_id       String
+  level          UserLevel @default(NORMAL)
+  unit_price     Decimal   @db.Decimal(10, 2)
+  unit           String
+  min_quantity   Int       @default(1)
+  max_quantity   Int?
+  discount       Decimal?  @db.Decimal(5, 4)
+  effective_from DateTime?
+  effective_to   DateTime?
+  created_at     DateTime  @default(now())
+
+  model Model @relation(fields: [model_id], references: [id], onDelete: Cascade)
+
+  @@index([model_id, level])
+  @@map("model_pricing")
+}
+
+// ============================================================
+// Generation Tasks
+// ============================================================
+
+model GenerationTask {
+  id                  String     @id @default(cuid())
+  user_id             String
+  model_id            String
+  task_type           TaskType
+  status              TaskStatus @default(CREATED)
+  idem_key            String?
+
+  input_params        Json
+  cost_snapshot       Decimal    @db.Decimal(10, 2)
+  total_cost          Decimal    @db.Decimal(10, 2)
+
+  upstream_job_id      String?
+  provider_channel_id String?
+  retry_count         Int        @default(0)
+
+  queued_at      DateTime?
+  started_at     DateTime?
+  completed_at   DateTime?
+  expired_at     DateTime?
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+
+  user     User                @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  model    Model               @relation(fields: [model_id], references: [id])
+  outputs  GenerationOutput[]
+  events   GenerationEvent[]
+
+  @@index([user_id, created_at])
+  @@index([status, created_at])
+  @@index([user_id, status])
+  @@index([upstream_job_id])
+  @@index([idem_key])
+  @@map("generation_task")
+}
+
+model GenerationOutput {
+  id            String    @id @default(cuid())
+  task_id       String
+  file_url      String
+  thumbnail_url String?
+  file_size     Int?
+  mime_type     String?
+  width         Int?
+  height        Int?
+  duration      Int?
+  sort_order    Int       @default(0)
+  created_at    DateTime  @default(now())
+
+  task GenerationTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@index([task_id])
+  @@map("generation_output")
+}
+
+model GenerationEvent {
+  id         String    @id @default(cuid())
+  task_id    String
+  event      String
+  detail     Json?
+  created_at DateTime  @default(now())
+
+  task GenerationTask @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@index([task_id])
+  @@map("generation_event")
+}
+
+model UserAsset {
+  id          String         @id @default(cuid())
+  user_id     String
+  type        OssObjectType
+  oss_key     String
+  file_url    String
+  file_name   String?
+  file_size   Int?
+  mime_type   String?
+  task_id     String?
+  created_at  DateTime       @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, type])
+  @@map("user_asset")
+}
+
+model Favorite {
+  id         String    @id @default(cuid())
+  user_id    String
+  task_id    String?
+  asset_id   String?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, task_id])
+  @@unique([user_id, asset_id])
+  @@index([user_id])
+  @@map("favorite")
+}
+
+// ============================================================
+// Provider Channels
+// ============================================================
+
+model ProviderChannel {
+  id            String       @id @default(cuid())
+  model_id      String
+  provider      ProviderType
+  name          String
+  config        Json
+  status        ChannelStatus @default(ACTIVE)
+  priority      Int          @default(0)
+  rate_limit    Int?
+  rate_used     Int          @default(0)
+  rate_reset_at DateTime?
+  created_at    DateTime     @default(now())
+  updated_at    DateTime     @updatedAt
+
+  request_logs ProviderRequestLog[]
+  tasks        GenerationTask[]
+
+  @@index([model_id, status])
+  @@map("provider_channel")
+}
+
+model ProviderRequestLog {
+  id              String   @id @default(cuid())
+  channel_id      String
+  task_id         String?
+  upstream_job_id String?
+  request         Json
+  response        Json?
+  status_code     Int?
+  duration_ms     Int?
+  cost            Decimal? @db.Decimal(10, 4)
+  error           String?
+  created_at      DateTime @default(now())
+
+  channel ProviderChannel @relation(fields: [channel_id], references: [id])
+
+  @@index([channel_id, created_at])
+  @@index([task_id])
+  @@map("provider_request_log")
+}
+
+// ============================================================
+// Review & Idempotency
+// ============================================================
+
+model ContentReviewRecord {
+  id           String       @id @default(cuid())
+  task_id      String?
+  asset_id     String?
+  content_url  String?
+  content_type String
+  provider     String
+  result       Json
+  status       ReviewStatus @default(PENDING)
+  passed_at    DateTime?
+  blocked_at   DateTime?
+  created_at   DateTime     @default(now())
+
+  @@index([task_id])
+  @@index([status])
+  @@map("content_review_record")
+}
+
+model IdempotencyRecord {
+  id           String   @id @default(cuid())
+  user_id      String
+  idem_key     String
+  request_hash String
+  response     Json?
+  created_at   DateTime @default(now())
+  expires_at   DateTime
+
+  @@unique([user_id, idem_key])
+  @@index([user_id, idem_key])
+  @@map("idempotency_record")
+}
+
+// ============================================================
+// System Config & Risk Control
+// ============================================================
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  description String?
+  updated_at  DateTime @updatedAt
+
+  @@map("system_config")
+}
+
+model RiskControlRecord {
+  id         String    @id @default(cuid())
+  user_id    String?
+  ip_address String?
+  action     String
+  risk_level RiskLevel
+  reason     String?
+  detail     Json?
+  created_at DateTime  @default(now())
+
+  @@index([user_id, action])
+  @@index([ip_address])
+  @@map("risk_control_record")
+}
