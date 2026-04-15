@@ -1,175 +1,272 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import React, { useCallback, useState } from 'react';
 import { SiteHeader } from '@/components/site-header';
-import styles from './page.module.css';
+import { ModelSelector } from '@/components/generation/model-selector';
+import { PromptInput } from '@/components/generation/prompt-input';
+import { ImageParams } from '@/components/generation/image-params';
+import { ReferenceImageUpload } from '@/components/generation/reference-image-upload';
+import { GenerationStatus } from '@/components/generation/generation-status';
+import { ResultGallery } from '@/components/generation/result-gallery';
+import { GenerationButton } from '@/components/generation/generation-button';
+import { LoginModal } from '@/components/login-modal';
+import { useAuth } from '@/contexts/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import { apiClient } from '@/lib/api-client';
 
-const MODELS = [
-  { slug: 'flux-2-schnell', name: 'FLUX.2 schnell', price: '¥0.5/张', speed: '⚡ 快速' },
-  { slug: 'flux-2-dev', name: 'FLUX.2 dev', price: '¥1.2/张', speed: '🔥 高质量' },
-  { slug: 'wanxiang-2-6', name: '万相 2.6', price: '¥0.5/张', speed: '✨ 阿里云' },
-];
+interface ImageOutput {
+  url: string;
+  thumbnail_url?: string;
+  width?: number;
+  height?: number;
+}
 
 export default function ImagePage() {
-  const [selectedModel, setSelectedModel] = useState(MODELS[0]);
+  const { isLoggedIn, balance } = useAuth();
+  const { error, success } = useToast();
+  const [showLogin, setShowLogin] = useState(false);
+
+  const [selectedModel, setSelectedModel] = useState('flux-2-schnell');
+  const [mode, setMode] = useState<'text2img' | 'img2img'>('text2img');
   const [prompt, setPrompt] = useState('');
   const [width, setWidth] = useState('1024');
   const [height, setHeight] = useState('1024');
-  const [imageCount, setImageCount] = useState(1);
   const [steps, setSteps] = useState('standard');
+  const [imageCount, setImageCount] = useState(1);
   const [referenceUrl, setReferenceUrl] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [taskId, setTaskId] = useState<string | null>(null);
-  const [outputs, setOutputs] = useState<Array<{ url: string; thumbnail?: string }>>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [strength, setStrength] = useState(0.7);
 
-  const handleGenerate = async () => {
-    if (!prompt.trim()) {
-      setError('请输入图片描述');
-      return;
-    }
+  const [generating, setGenerating] = useState(false);
+  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
+  const [taskOutputs, setTaskOutputs] = useState<ImageOutput[]>([]);
+  const [galleryOutputs, setGalleryOutputs] = useState<ImageOutput[]>([]);
+  const [progressMsg, setProgressMsg] = useState<string | null>(null);
+
+  // Estimate: flux-2-schnell = 0.005元, standard=1x, high=2x
+  const getPricePerImage = () => {
+    const base = selectedModel.includes('schnell') ? 0.005 : 0.012;
+    const multiplier = steps === 'fast' ? 0.7 : steps === 'high' ? 2.0 : 1.0;
+    return base * multiplier;
+  };
+  const estimateCost = getPricePerImage() * imageCount;
+  const balanceYuan = balance ? balance.available / 100 : null;
+
+  const handleGenerate = useCallback(async () => {
+    if (!isLoggedIn) { setShowLogin(true); return; }
+    if (!prompt.trim()) { error('请输入图片描述'); return; }
 
     setGenerating(true);
-    setError(null);
-    setOutputs([]);
+    setProgressMsg(null);
+    setTaskOutputs([]);
+    setCurrentTaskId(null);
 
     try {
-      // TODO: Call apiClient.createTask
-      // For now, simulate task creation
-      setError('⚠️ API 尚未连接，请先启动后端服务');
+      const params = {
+        model_slug: selectedModel,
+        prompt,
+        width,
+        height,
+        num_inference_steps: steps as 'fast' | 'standard' | 'high',
+        image_count: imageCount,
+        strength,
+        ...(mode === 'img2img' && referenceUrl ? { reference_image_url: referenceUrl } : {}),
+      };
+
+      const res = await apiClient.tasks.create(params as Parameters<typeof apiClient.tasks.create>[0]);
+      setCurrentTaskId(res.task_id);
+      setProgressMsg('任务已创建，正在排队...');
     } catch (e) {
-      setError((e as Error).message);
-    } finally {
+      error((e as Error).message || '创建任务失败');
       setGenerating(false);
     }
-  };
+  }, [isLoggedIn, prompt, selectedModel, width, height, steps, imageCount, strength, referenceUrl, mode, error]);
+
+  const handleStreamComplete = useCallback((outputs: ImageOutput[]) => {
+    setTaskOutputs(outputs);
+    setGalleryOutputs((prev) => [...outputs, ...prev]);
+    setGenerating(false);
+    success('🎉 图片生成完成！');
+  }, [success]);
+
+  const handleStreamError = useCallback((err: string) => {
+    error(`生成失败: ${err}`);
+    setGenerating(false);
+  }, [error]);
+
+  const handleFavorite = useCallback(async (taskId: string) => {
+    try {
+      await apiClient.favorites.add(taskId);
+      success('已添加到收藏夹 ⭐');
+    } catch {
+      error('收藏失败');
+    }
+  }, [success, error]);
 
   return (
-    <main className={styles.main}>
+    <main style={{ minHeight: '100vh', background: '#0f0f23' }}>
       <SiteHeader />
 
-      <div className={styles.container}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 20px' }}>
+        <h1 style={{ color: '#e2e8f0', fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
+          🎨 图片生成
+        </h1>
+        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 32 }}>
+          文生图 / 图生图，多种风格模型可选
+        </p>
+
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+          {([
+            { key: 'text2img', label: '🎨 文生图' },
+            { key: 'img2img', label: '🖼️ 图生图' },
+          ] as const).map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setMode(m.key)}
+              style={{
+                padding: '8px 20px', borderRadius: 20, border: '1px solid',
+                borderColor: mode === m.key ? '#6366f1' : 'rgba(255,255,255,0.12)',
+                background: mode === m.key ? 'rgba(99,102,241,0.15)' : 'transparent',
+                color: mode === m.key ? '#a5b4fc' : '#64748b', fontSize: 14,
+                cursor: 'pointer',
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
         {/* Model Selector */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>选择模型</h2>
-          <div className={styles.modelRow}>
-            {MODELS.map((m) => (
-              <button
-                key={m.slug}
-                className={`${styles.modelBtn} ${selectedModel.slug === m.slug ? styles.active : ''}`}
-                onClick={() => setSelectedModel(m)}
-              >
-                <span className={styles.modelBtnName}>{m.name}</span>
-                <span className={styles.modelBtnPrice}>{m.price}</span>
-                <span className={styles.modelBtnSpeed}>{m.speed}</span>
-              </button>
-            ))}
-          </div>
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>选择模型</h2>
+          <ModelSelector
+            type="image"
+            value={selectedModel}
+            onChange={setSelectedModel}
+          />
         </section>
 
-        {/* Prompt Input */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>图片描述</h2>
-          <textarea
-            className={styles.promptInput}
-            placeholder="描述你想要生成的图片，例如：一只橘色的猫在草地上奔跑，超写实风格"
+        {/* Prompt */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>图片描述</h2>
+          <PromptInput
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={setPrompt}
             maxLength={2000}
             rows={4}
           />
-          <div className={styles.charCount}>{prompt.length}/2000</div>
         </section>
 
-        {/* Size & Options */}
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>尺寸与参数</h2>
-          <div className={styles.optionsGrid}>
-            <div className={styles.optionGroup}>
-              <label className={styles.optionLabel}>宽度</label>
-              <select value={width} onChange={(e) => setWidth(e.target.value)} className={styles.select}>
-                <option value="512">512px</option>
-                <option value="1024">1024px</option>
-                <option value="1080">1080px</option>
-              </select>
-            </div>
-            <div className={styles.optionGroup}>
-              <label className={styles.optionLabel}>高度</label>
-              <select value={height} onChange={(e) => setHeight(e.target.value)} className={styles.select}>
-                <option value="512">512px</option>
-                <option value="1024">1024px</option>
-                <option value="1920">1920px (竖版)</option>
-              </select>
-            </div>
-            <div className={styles.optionGroup}>
-              <label className={styles.optionLabel}>张数</label>
-              <select value={imageCount} onChange={(e) => setImageCount(Number(e.target.value))} className={styles.select}>
-                <option value={1}>1 张</option>
-                <option value={2}>2 张</option>
-                <option value={4}>4 张</option>
-              </select>
-            </div>
-            <div className={styles.optionGroup}>
-              <label className={styles.optionLabel}>质量档位</label>
-              <select value={steps} onChange={(e) => setSteps(e.target.value)} className={styles.select}>
-                <option value="fast">快速</option>
-                <option value="standard">标准</option>
-                <option value="high">高质量</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Reference Image (optional) */}
-          <div className={styles.optionGroup} style={{ marginTop: 16 }}>
-            <label className={styles.optionLabel}>参考图 URL（可选，图生图）</label>
-            <input
-              type="url"
-              className={styles.textInput}
-              placeholder="https://..."
+        {/* Reference image (img2img only) */}
+        {mode === 'img2img' && (
+          <section style={{ marginBottom: 28 }}>
+            <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>参考图</h2>
+            <ReferenceImageUpload
               value={referenceUrl}
-              onChange={(e) => setReferenceUrl(e.target.value)}
+              onChange={setReferenceUrl}
+              strength={strength}
+              onStrengthChange={setStrength}
             />
-          </div>
-        </section>
-
-        {/* Generate Button */}
-        <div className={styles.generateBar}>
-          <div className={styles.priceEstimate}>
-            预估费用：<strong>¥{((selectedModel.price.match(/[\d.]+/)?.[0] ?? '0.5') as unknown as number) * imageCount}</strong>
-          </div>
-          {error && <span className={styles.errorMsg}>{error}</span>}
-          <button
-            className={styles.generateBtn}
-            onClick={handleGenerate}
-            disabled={generating}
-          >
-            {generating ? '⚡ 生成中...' : `🚀 生成图片（¥${((selectedModel.price.match(/[\d.]+/)?.[0] ?? '0.5') as unknown as number) * imageCount}）`}
-          </button>
-        </div>
-
-        {/* Results */}
-        {outputs.length > 0 && (
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>生成结果</h2>
-            <div className={styles.outputGrid}>
-              {outputs.map((o, i) => (
-                <div key={i} className={styles.outputItem}>
-                  <img src={o.url} alt={`Generated ${i + 1}`} className={styles.outputImg} />
-                  <a href={o.url} download className={styles.downloadBtn}>下载</a>
-                </div>
-              ))}
-            </div>
           </section>
         )}
 
-        {taskId && !outputs.length && !generating && (
-          <div className={styles.waitingState}>
-            <p>任务已创建，请稍候...</p>
-            <Link href={`/dashboard`} className={styles.link}>查看进度 →</Link>
-          </div>
+        {/* Size / Quality / Count */}
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>参数设置</h2>
+          <ImageParams
+            width={width}
+            height={height}
+            steps={steps}
+            imageCount={imageCount}
+            onWidthChange={setWidth}
+            onHeightChange={setHeight}
+            onStepsChange={setSteps}
+            onImageCountChange={setImageCount}
+          />
+        </section>
+
+        {/* Generate button */}
+        <div
+          style={{
+            padding: '16px 20px', borderRadius: 12,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12,
+            marginBottom: 24,
+          }}
+        >
+          <GenerationButton
+            estimate={estimateCost}
+            balance={balanceYuan}
+            disabled={!prompt.trim()}
+            loading={generating}
+            label={generating ? '⚡ 生成中...' : `🚀 生成（¥${estimateCost.toFixed(2)}）`}
+          />
+          {!isLoggedIn && (
+            <button
+              onClick={() => setShowLogin(true)}
+              style={{
+                padding: '12px 20px', borderRadius: 10, background: '#6366f1',
+                color: '#fff', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              登录后生成
+            </button>
+          )}
+          {isLoggedIn && (
+            <button
+              onClick={handleGenerate}
+              disabled={!prompt.trim() || generating}
+              style={{
+                padding: '12px 28px', borderRadius: 10,
+                background: !prompt.trim() || generating
+                  ? 'rgba(99,102,241,0.4)'
+                  : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: '#fff', border: 'none', fontSize: 15, fontWeight: 700,
+                cursor: !prompt.trim() || generating ? 'not-allowed' : 'pointer',
+                boxShadow: !prompt.trim() || generating ? 'none' : '0 4px 14px rgba(99,102,241,0.4)',
+              }}
+            >
+              {generating ? '⚡ 生成中...' : `🚀 开始生成（¥${estimateCost.toFixed(2)}）`}
+            </button>
+          )}
+        </div>
+
+        {/* Generation Status */}
+        {currentTaskId && (
+          <GenerationStatus
+            taskId={currentTaskId}
+            onComplete={handleStreamComplete}
+            onError={handleStreamError}
+            onFavorite={handleFavorite}
+          />
+        )}
+
+        {/* Current task outputs */}
+        {taskOutputs.length > 0 && (
+          <section style={{ marginTop: 24 }}>
+            <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>本次结果</h2>
+            <ResultGallery
+              images={taskOutputs}
+              onFavorite={(url) => {
+                apiClient.favorites.add(currentTaskId!).then(() => success('已收藏 ⭐')).catch(() => error('收藏失败'));
+              }}
+            />
+          </section>
+        )}
+
+        {/* Gallery */}
+        {galleryOutputs.length > 0 && (
+          <section style={{ marginTop: 32 }}>
+            <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>
+              📸 历史生成 ({galleryOutputs.length})
+            </h2>
+            <ResultGallery images={galleryOutputs} />
+          </section>
         )}
       </div>
+
+      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </main>
   );
 }
