@@ -1,237 +1,114 @@
 'use client';
-
-import React, { useCallback, useState } from 'react';
+import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
-import { ModelSelector } from '@/components/generation/model-selector';
-import { PromptInput } from '@/components/generation/prompt-input';
-import { GenerationStatus } from '@/components/generation/generation-status';
-import { ResultGallery } from '@/components/generation/result-gallery';
-import { LoginModal } from '@/components/login-modal';
-import { useAuth } from '@/contexts/auth-context';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api-client';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { useState } from 'react';
 
-const DURATIONS = [3, 5, 10, 15];
-const RESOLUTIONS = ['540p', '720p', '1080p', '4K'];
+const MODELS = [
+  { id: 'seedance', icon: '🎬', name: 'Seedance 1.5 Pro', desc: '高质量 · 中文理解强', price: '¥1.5/秒' },
+  { id: 'kling-3', icon: '⚡', name: 'Kling 3.0', desc: '极速 · 电商场景', price: '¥2.0/秒' },
+];
+const DURATIONS = ['5秒', '10秒', '15秒'];
+const RESOLUTIONS = ['720p', '1080p'];
+const CAMERAS = ['固定镜头', '环绕', '推进', '平移'];
+
+const HISTORY = [
+  { id: '1', model: 'Seedance 1.5 Pro · 720p · 5秒', prompt: '无人机穿越峡谷，沉浸式飞行体验', time: '刚刚', img: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=500&q=75' },
+  { id: '2', model: 'Seedance 1.5 Pro · 1080p · 10秒', prompt: '日落海边冲浪，慢动作', time: '3 分钟前', img: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=500&q=75' },
+  { id: '3', model: 'Kling 3.0 · 720p · 5秒', prompt: '城市街道延时摄影', time: '8 分钟前', img: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=500&q=75' },
+  { id: '4', model: 'Seedance 1.5 Pro · 720p · 5秒', prompt: '枫叶飘落秋天', time: '15 分钟前', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=75' },
+];
 
 export default function VideoPage() {
-  const { isLoggedIn, balance } = useAuth();
-  const { error, success } = useToast();
-  const t = useTranslations('video');
-  const tToast = useTranslations('toast');
-  const tStatus = useTranslations('status');
-  const tParams = useTranslations('params');
-  const [showLogin, setShowLogin] = useState(false);
-
-  const [selectedModel, setSelectedModel] = useState('seedance-2-0');
+  const locale = useLocale();
+  const L = (path: string) => `/${locale}${path}`;
+  const [selectedModel, setSelectedModel] = useState(MODELS[0]);
+  const [duration, setDuration] = useState(0);
+  const [resolution, setResolution] = useState(0);
+  const [camera, setCamera] = useState(0);
   const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(5);
-  const [resolution, setResolution] = useState('1080p');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [history, setHistory] = useState(HISTORY);
 
-  const [generating, setGenerating] = useState(false);
-  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
-  const [currentOutputs, setCurrentOutputs] = useState<Array<{ url: string; thumbnail_url?: string; width?: number; height?: number }>>([]);
-  const [historyOutputs, setHistoryOutputs] = useState<typeof currentOutputs>([]);
-
-  const getPricePerSec = () => {
-    if (selectedModel.includes('1-5')) return 0.015;
-    return 0.03;
+  const handleGenerate = async () => {
+    if (!prompt.trim() || isGenerating) return;
+    setIsGenerating(true);
+    await new Promise(r => setTimeout(r, 3000));
+    setIsGenerating(false);
   };
-  const estimateCost = getPricePerSec() * duration;
-  const balanceYuan = balance ? balance.available / 100 : null;
-
-  const handleGenerate = useCallback(async () => {
-    if (!isLoggedIn) { setShowLogin(true); return; }
-    if (!prompt.trim()) { error(tToast('needVideoPrompt')); return; }
-
-    setGenerating(true);
-    setCurrentOutputs([]);
-    setCurrentTaskId(null);
-
-    try {
-      const res = await apiClient.tasks.create({
-        model_slug: selectedModel,
-        prompt,
-        duration,
-        resolution,
-      } as Parameters<typeof apiClient.tasks.create>[0]);
-      setCurrentTaskId(res.task_id);
-    } catch (e) {
-      error((e as Error).message || tToast('taskFailed'));
-      setGenerating(false);
-    }
-  }, [isLoggedIn, prompt, selectedModel, duration, resolution, error, tToast]);
-
-  const handleComplete = useCallback((outputs: typeof currentOutputs) => {
-    setCurrentOutputs(outputs);
-    setHistoryOutputs((prev) => [...outputs, ...prev]);
-    setGenerating(false);
-    success(tToast('successVideo'));
-  }, [success, tToast]);
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0f0f23' }}>
+    <main style={{ minHeight: '100vh', background: '#08080f' }}>
       <SiteHeader />
+      <div className={styles.layout}>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 20px' }}>
-        <h1 style={{ color: '#e2e8f0', fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
-          🎬 {t('title')}
-        </h1>
-        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 32 }}>
-          {t('subtitle')}
-        </p>
-
-        {/* Model Selector */}
-        <section style={{ marginBottom: 28 }}>
-          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('modelLabel')}</h2>
-          <ModelSelector type="video" value={selectedModel} onChange={setSelectedModel} />
-        </section>
-
-        {/* Prompt */}
-        <section style={{ marginBottom: 28 }}>
-          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('promptLabel')}</h2>
-          <PromptInput
-            value={prompt}
-            onChange={setPrompt}
-            maxLength={500}
-            placeholder={t('promptPlaceholder')}
-            rows={3}
-          />
-        </section>
-
-        {/* Duration + Resolution */}
-        <section style={{ marginBottom: 28 }}>
-          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('durationQuality')}</h2>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-            {/* Duration */}
-            <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
-                {t('duration')}
-              </label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {DURATIONS.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDuration(d)}
-                    style={{
-                      flex: 1, padding: '10px 4px', borderRadius: 8, textAlign: 'center',
-                      border: `2px solid ${duration === d ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
-                      background: duration === d ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
-                      color: duration === d ? '#a5b4fc' : '#64748b', fontSize: 14,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {d}{tParams('size').includes('寸') ? '秒' : 's'}
+        {/* Left */}
+        <aside className={styles.leftPanel}>
+          <div className={styles.topBar}>
+            <div className={styles.modelPill} onClick={() => setSelectedModel(selectedModel!.id === 'seedance' ? MODELS[1] : MODELS[0])}>
+              <span className={styles.modelPillIcon}>{selectedModel!.icon}</span>
+              <span className={styles.modelPillName}>{selectedModel!.name}</span>
+            </div>
+            {['时长', '分辨率'].map((label, i) => (
+              <div key={label} style={{ display: 'flex', gap: 4 }}>
+                {label === '时长' && DURATIONS.map((d, di) => (
+                  <button key={d} className={`${styles.chip} ${di === duration ? styles.chipActive : ''}`} onClick={() => setDuration(di)}>
+                    <span className={styles.chipLabel}>{label}</span><span className={styles.chipDiv}>·</span><span>{d}</span>
+                  </button>
+                ))}
+                {label === '分辨率' && RESOLUTIONS.map((r, ri) => (
+                  <button key={r} className={`${styles.chip} ${ri === resolution ? styles.chipActive : ''}`} onClick={() => setResolution(ri)}>
+                    <span className={styles.chipLabel}>{label}</span><span className={styles.chipDiv}>·</span><span>{r}</span>
                   </button>
                 ))}
               </div>
+            ))}
+            {CAMERAS.map((c, ci) => (
+              <button key={c} className={`${styles.chip} ${ci === camera ? styles.chipActive : ''}`} onClick={() => setCamera(ci)}>
+                <span className={styles.chipLabel}>镜头</span><span className={styles.chipDiv}>·</span><span>{c}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className={styles.coreUnit}>
+            <div className={styles.promptBox}>
+              <textarea className={styles.promptTextarea} placeholder="描述你想要的视频场景... 例如：无人机穿越峡谷，极速飞行体验" value={prompt} onChange={e => setPrompt(e.target.value)} />
+              <div className={styles.promptFooter}><span /><span className={styles.charCount}>{prompt.length} / 1000</span></div>
             </div>
+            <button className={styles.generateBtn} onClick={handleGenerate} disabled={isGenerating || !prompt.trim()}>
+              {isGenerating ? <><span className={styles.spinner} /> 生成中…</> : '🎬 开始生成'}
+            </button>
+          </div>
+          <p className={styles.balanceHint}>余额 <strong>¥9.50</strong> · 预估 ¥{DURATIONS[duration]!.replace('秒','')}</p>
+        </aside>
 
-            {/* Resolution */}
-            <div>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
-                {t('resolution')}
-              </label>
-              <select
-                value={resolution}
-                onChange={(e) => setResolution((e.target as HTMLSelectElement).value)}
-                style={{
-                  width: '100%', padding: '10px 12px', borderRadius: 8,
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(255,255,255,0.04)', color: '#e2e8f0',
-                  fontSize: 14, outline: 'none',
-                }}
-              >
-                {RESOLUTIONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
+        {/* Right */}
+        <main className={styles.rightPanel}>
+          <div className={styles.historyTopbar}>
+            <div><span className={styles.historyHeading}>生成历史</span><span className={styles.historyCount}>{history.length} 条</span></div>
+            <div className={styles.historyFilter}>
+              {['全部','视频','收藏'].map((f,i) => <button key={f} className={`${styles.filterBtn} ${i===0 ? styles.filterBtnActive : ''}`}>{f}</button>)}
             </div>
           </div>
-        </section>
-
-        {/* Estimate bar */}
-        <div
-          style={{
-            padding: '16px 20px', borderRadius: 12,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ color: '#94a3b8', fontSize: 14 }}>
-            {t('estimate')}：<strong style={{ color: '#e2e8f0' }}>¥{estimateCost.toFixed(2)}</strong>
+          <div className={styles.historyGrid}>
+            {history.map(item => (
+              <div key={item.id} className={styles.historyCard}>
+                <img className={styles.historyThumb} src={item.img} alt={item.prompt} loading="lazy" />
+                <div className={styles.historyBody}>
+                  <span className={styles.historyTag}>{item.model}</span>
+                  <p className={styles.historyPrompt}>{item.prompt}</p>
+                </div>
+                <div className={styles.historyFooter}>
+                  <span className={styles.historyTime}>{item.time}</span>
+                  <div className={styles.historyActions}>
+                    <button className={styles.histAct}>⬇</button><button className={styles.histAct}>⭐</button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          {balanceYuan !== null && (
-            <span style={{ color: '#64748b', fontSize: 13, marginLeft: 'auto' }}>
-              {t('balance')} ¥{balanceYuan.toFixed(2)}
-            </span>
-          )}
-        </div>
-
-        {/* Generate */}
-        {!isLoggedIn ? (
-          <button
-            onClick={() => setShowLogin(true)}
-            style={{
-              padding: '12px 28px', borderRadius: 10, background: '#6366f1',
-              color: '#fff', border: 'none', fontSize: 15, fontWeight: 700, cursor: 'pointer',
-            }}
-          >
-            {t('loginToGenerate')}
-          </button>
-        ) : (
-          <button
-            onClick={handleGenerate}
-            disabled={!prompt.trim() || generating}
-            style={{
-              padding: '12px 28px', borderRadius: 10,
-              background: !prompt.trim() || generating
-                ? 'rgba(99,102,241,0.4)'
-                : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              color: '#fff', border: 'none', fontSize: 15, fontWeight: 700,
-              cursor: !prompt.trim() || generating ? 'not-allowed' : 'pointer',
-              boxShadow: !prompt.trim() || generating ? 'none' : '0 4px 14px rgba(99,102,241,0.4)',
-            }}
-          >
-            {generating ? `⚡ ${t('generating')}` : `🚀 ${t('generate')}（¥${estimateCost.toFixed(2)}）`}
-          </button>
-        )}
-
-        {/* Status */}
-        {currentTaskId && (
-          <GenerationStatus
-            taskId={currentTaskId}
-            onComplete={handleComplete}
-            onError={(err) => { error(err); setGenerating(false); }}
-          />
-        )}
-
-        {/* Video player */}
-        {currentOutputs.map((o, i) => (
-          <div key={i} style={{ marginTop: 24 }}>
-            <video
-              src={o.url}
-              controls
-              style={{ width: '100%', maxWidth: 720, borderRadius: 12, display: 'block' }}
-            />
-          </div>
-        ))}
-
-        {/* History */}
-        {historyOutputs.length > 0 && (
-          <section style={{ marginTop: 32 }}>
-            <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>
-              🎞️ {t('history')} ({historyOutputs.length})
-            </h2>
-            <ResultGallery images={historyOutputs} />
-          </section>
-        )}
+        </main>
       </div>
-
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </main>
   );
 }

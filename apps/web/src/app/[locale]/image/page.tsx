@@ -1,275 +1,201 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
-import { ModelSelector } from '@/components/generation/model-selector';
-import { PromptInput } from '@/components/generation/prompt-input';
-import { ImageParams } from '@/components/generation/image-params';
-import { ReferenceImageUpload } from '@/components/generation/reference-image-upload';
-import { GenerationStatus } from '@/components/generation/generation-status';
-import { ResultGallery } from '@/components/generation/result-gallery';
-import { GenerationButton } from '@/components/generation/generation-button';
-import { LoginModal } from '@/components/login-modal';
-import { useAuth } from '@/contexts/auth-context';
-import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api-client';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
+import { useState, useRef, useEffect } from 'react';
 
-interface ImageOutput {
-  url: string;
-  thumbnail_url?: string;
-  width?: number;
-  height?: number;
-}
+const MODELS = [
+  { id: 'flux-schnell', icon: '⚡', name: 'FLUX.2 schnell', desc: '快速 · 写实/动漫', price: '¥0.5/张' },
+  { id: 'wanxiang-26', icon: '🔥', name: '万相 2.6', desc: '高质量 · 中文理解强', price: '¥0.5/张' },
+  { id: 'flux-dev', icon: '✨', name: 'FLUX.2 dev', desc: '顶配 · 细节极致', price: '¥1.2/张' },
+];
+
+const SIZES = ['512²', '768²', '1024²', '9:16'];
+const QUALITIES = ['⚡快速', '✨标准', '🔥高质量'];
+const COUNTS = ['1张', '2张', '4张'];
+
+const HISTORY_ITEMS = [
+  { id: '1', model: 'FLUX.2 schnell · 1024²', prompt: '一只穿着宇航服的橘猫，在月球表面仰望地球，赛博朋克风格', time: '刚刚', img: 'https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?w=500&q=75', tag: '图片' },
+  { id: '2', model: '万相 2.6 · 1024²', prompt: '未来城市夜景，霓虹灯光', time: '2 分钟前', img: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=500&q=75', tag: '图片' },
+  { id: '3', model: 'FLUX.2 dev · 512²', prompt: '渐变抽象艺术', time: '5 分钟前', img: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=500&q=75', tag: '图片' },
+  { id: '4', model: '万相 2.6 · 9:16', prompt: '油画风格，日落海景', time: '8 分钟前', img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&q=75', tag: '图片' },
+  { id: '5', model: 'FLUX.2 schnell · 512²', prompt: '极简黑白建筑', time: '12 分钟前', img: 'https://images.unsplash.com/photo-1614850715649-1d0106293bd1?w=500&q=75', tag: '图片' },
+  { id: '6', model: 'FLUX.2 dev · 1024²', prompt: 'AI 神经网络可视化', time: '20 分钟前', img: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=500&q=75', tag: '图片' },
+];
+
+const PLACEHOLDER = '描述你想要的图片... 例如：一只橘色的猫在草地上奔跑，写实风格...';
 
 export default function ImagePage() {
-  const { isLoggedIn, balance } = useAuth();
-  const { error, success } = useToast();
   const t = useTranslations('image');
-  const tStatus = useTranslations('status');
-  const tToast = useTranslations('toast');
-  const [showLogin, setShowLogin] = useState(false);
+  const tf = useTranslations('footer');
+  const locale = useLocale();
+  const L = (path: string) => `/${locale}${path}`;
 
-  const [selectedModel, setSelectedModel] = useState('flux-2-schnell');
-  const [mode, setMode] = useState<'text2img' | 'img2img'>('text2img');
+  const [selectedModel, setSelectedModel] = useState(MODELS[0]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
-  const [width, setWidth] = useState('1024');
-  const [height, setHeight] = useState('1024');
-  const [steps, setSteps] = useState('standard');
-  const [imageCount, setImageCount] = useState(1);
-  const [referenceUrl, setReferenceUrl] = useState('');
-  const [strength, setStrength] = useState(0.7);
+  const [selectedSize, setSelectedSize] = useState(2);
+  const [selectedQuality, setSelectedQuality] = useState(1);
+  const [selectedCount, setSelectedCount] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [history, setHistory] = useState(HISTORY_ITEMS);
+  const [filter, setFilter] = useState('all');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [generating, setGenerating] = useState(false);
-  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
-  const [taskOutputs, setTaskOutputs] = useState<ImageOutput[]>([]);
-  const [galleryOutputs, setGalleryOutputs] = useState<ImageOutput[]>([]);
-  const [progressMsg, setProgressMsg] = useState<string | null>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
-  const getPricePerImage = () => {
-    const base = selectedModel.includes('schnell') ? 0.005 : 0.012;
-    const multiplier = steps === 'fast' ? 0.7 : steps === 'high' ? 2.0 : 1.0;
-    return base * multiplier;
+  const handleGenerate = async () => {
+    if (!prompt.trim() || isGenerating) return;
+    setIsGenerating(true);
+
+    // TODO: connect to real API
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    setIsGenerating(false);
   };
-  const estimateCost = getPricePerImage() * imageCount;
-  const balanceYuan = balance ? balance.available / 100 : null;
 
-  const handleGenerate = useCallback(async () => {
-    if (!isLoggedIn) { setShowLogin(true); return; }
-    if (!prompt.trim()) { error(tToast('needPrompt')); return; }
-
-    setGenerating(true);
-    setProgressMsg(null);
-    setTaskOutputs([]);
-    setCurrentTaskId(null);
-
-    try {
-      const params = {
-        model_slug: selectedModel,
-        prompt,
-        width,
-        height,
-        num_inference_steps: steps as 'fast' | 'standard' | 'high',
-        image_count: imageCount,
-        strength,
-        ...(mode === 'img2img' && referenceUrl ? { reference_image_url: referenceUrl } : {}),
-      };
-
-      const res = await apiClient.tasks.create(params as Parameters<typeof apiClient.tasks.create>[0]);
-      setCurrentTaskId(res.task_id);
-      setProgressMsg(tStatus('queuedMsg', { position: '?' }));
-    } catch (e) {
-      error((e as Error).message || tToast('taskFailed'));
-      setGenerating(false);
-    }
-  }, [isLoggedIn, prompt, selectedModel, width, height, steps, imageCount, strength, referenceUrl, mode, error, tToast, tStatus]);
-
-  const handleStreamComplete = useCallback((outputs: ImageOutput[]) => {
-    setTaskOutputs(outputs);
-    setGalleryOutputs((prev) => [...outputs, ...prev]);
-    setGenerating(false);
-    success(tToast('successImage'));
-  }, [success, tToast]);
-
-  const handleStreamError = useCallback((err: string) => {
-    error(`${tToast('taskFailed')}: ${err}`);
-    setGenerating(false);
-  }, [error, tToast]);
-
-  const handleFavorite = useCallback(async (taskId: string) => {
-    try {
-      await apiClient.favorites.add(taskId);
-      success(tToast('favorited'));
-    } catch {
-      error(tToast('favoriteFailed'));
-    }
-  }, [success, error, tToast]);
+  const filtered = filter === 'all' ? history : history.filter(h => h.tag === filter);
 
   return (
-    <main style={{ minHeight: '100vh', background: '#0f0f23' }}>
+    <main style={{ minHeight: '100vh', background: '#08080f' }}>
       <SiteHeader />
+      <div className={styles.layout}>
 
-      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 20px' }}>
-        <h1 style={{ color: '#e2e8f0', fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
-          🎨 {t('title')}
-        </h1>
-        <p style={{ color: '#64748b', fontSize: 14, marginBottom: 32 }}>
-          {t('subtitle')}
-        </p>
+        {/* ── Left Panel ── */}
+        <aside className={styles.leftPanel}>
 
-        {/* Mode toggle */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
-          {([
-            { key: 'text2img', label: t('mode.text2img') },
-            { key: 'img2img', label: t('mode.img2img') },
-          ] as const).map((m) => (
+          {/* Top bar */}
+          <div className={styles.topBar}>
+            <div className={styles.modelSelector} ref={dropdownRef}>
+              <div className={styles.modelPill} onClick={() => setDropdownOpen(d => !d)}>
+                <span className={styles.modelPillIcon}>{selectedModel!.icon}</span>
+                <span className={styles.modelPillName}>{selectedModel!.name}</span>
+                <span style={{ fontSize: 9, color: '#475569' }}>▼</span>
+              </div>
+              <div className={`${styles.modelDropdown} ${dropdownOpen ? styles.modelDropdownOpen : ''}`}>
+                {MODELS.map(m => (
+                  <div key={m.id} className={`${styles.modelOption} ${m.id === selectedModel!.id ? styles.modelOptionSelected : ''}`}
+                    onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}>
+                    <div className={styles.modelOptionLeft}>
+                      <span style={{ fontSize: 16 }}>{m.icon}</span>
+                      <div>
+                        <div className={styles.modelOptionName}>{m.name}</div>
+                        <div className={styles.modelOptionDesc}>{m.desc}</div>
+                      </div>
+                    </div>
+                    <span className={styles.modelOptionPrice}>{m.price}</span>
+                    <span className={styles.modelOptionCheck}>✓</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {['尺寸', '质量', '张数'].map((label, i) => (
+              <div key={label} style={{ display: 'flex', gap: 4 }}>
+                {label === '尺寸' && SIZES.map((s, si) => (
+                  <button key={s} className={`${styles.chip} ${si === selectedSize ? styles.chipActive : ''}`}
+                    onClick={() => setSelectedSize(si)}>
+                    <span className={styles.chipLabel}>{label}</span>
+                    <span className={styles.chipDiv}>·</span>
+                    <span>{s}</span>
+                  </button>
+                ))}
+                {label === '质量' && QUALITIES.map((q, qi) => (
+                  <button key={q} className={`${styles.chip} ${qi === selectedQuality ? styles.chipActive : ''}`}
+                    onClick={() => setSelectedQuality(qi)}>
+                    <span className={styles.chipLabel}>{label}</span>
+                    <span className={styles.chipDiv}>·</span>
+                    <span>{q}</span>
+                  </button>
+                ))}
+                {label === '张数' && COUNTS.map((c, ci) => (
+                  <button key={c} className={`${styles.chip} ${ci === selectedCount ? styles.chipActive : ''}`}
+                    onClick={() => setSelectedCount(ci)}>
+                    <span className={styles.chipLabel}>{label}</span>
+                    <span className={styles.chipDiv}>·</span>
+                    <span>{c}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+
+            <button className={`${styles.chip} ${styles.refChip}`} title="上传参考图">📷</button>
+          </div>
+
+          {/* Prompt + Generate (tight unit) */}
+          <div className={styles.coreUnit}>
+            <div className={styles.promptBox}>
+              <textarea
+                className={styles.promptTextarea}
+                placeholder={PLACEHOLDER}
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleGenerate(); }}
+              />
+              <div className={styles.promptFooter}>
+                <span />
+                <span className={styles.charCount}>{prompt.length} / 2000</span>
+              </div>
+            </div>
             <button
-              key={m.key}
-              onClick={() => setMode(m.key)}
-              style={{
-                padding: '8px 20px', borderRadius: 20, border: '1px solid',
-                borderColor: mode === m.key ? '#6366f1' : 'rgba(255,255,255,0.12)',
-                background: mode === m.key ? 'rgba(99,102,241,0.15)' : 'transparent',
-                color: mode === m.key ? '#a5b4fc' : '#64748b', fontSize: 14,
-                cursor: 'pointer',
-              }}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Model Selector */}
-        <section style={{ marginBottom: 12 }}>
-          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('modelLabel')}</h2>
-          <ModelSelector
-            type="image"
-            value={selectedModel}
-            onChange={setSelectedModel}
-          />
-        </section>
-
-        {/* Prompt */}
-        <section style={{ marginBottom: 12 }}>
-          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('promptLabel')}</h2>
-          <PromptInput
-            value={prompt}
-            onChange={setPrompt}
-            maxLength={2000}
-            rows={4}
-          />
-        </section>
-
-        {/* Reference image (img2img only) */}
-        {mode === 'img2img' && (
-          <section style={{ marginBottom: 12 }}>
-            <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('refImage')}</h2>
-            <ReferenceImageUpload
-              value={referenceUrl}
-              onChange={setReferenceUrl}
-              strength={strength}
-              onStrengthChange={setStrength}
-            />
-          </section>
-        )}
-
-        {/* Size / Quality / Count */}
-        <section style={{ marginBottom: 12 }}>
-          <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('params')}</h2>
-          <ImageParams
-            width={width}
-            height={height}
-            steps={steps}
-            imageCount={imageCount}
-            onWidthChange={setWidth}
-            onHeightChange={setHeight}
-            onStepsChange={setSteps}
-            onImageCountChange={setImageCount}
-          />
-        </section>
-
-        {/* Generate button */}
-        <div
-          style={{
-            padding: '16px 20px', borderRadius: 12,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12,
-            marginBottom: 24,
-          }}
-        >
-          <GenerationButton
-            estimate={estimateCost}
-            balance={balanceYuan}
-            disabled={!prompt.trim()}
-            loading={generating}
-            label={generating ? tStatus('progress') : `🚀 ${t('generate')}（¥${estimateCost.toFixed(2)}）`}
-          />
-          {!isLoggedIn && (
-            <button
-              onClick={() => setShowLogin(true)}
-              style={{
-                padding: '12px 20px', borderRadius: 10, background: '#6366f1',
-                color: '#fff', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-              }}
-            >
-              {t('loginToGenerate')}
-            </button>
-          )}
-          {isLoggedIn && (
-            <button
+              className={styles.generateBtn}
               onClick={handleGenerate}
-              disabled={!prompt.trim() || generating}
-              style={{
-                padding: '12px 28px', borderRadius: 10,
-                background: !prompt.trim() || generating
-                  ? 'rgba(99,102,241,0.4)'
-                  : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                color: '#fff', border: 'none', fontSize: 15, fontWeight: 700,
-                cursor: !prompt.trim() || generating ? 'not-allowed' : 'pointer',
-                boxShadow: !prompt.trim() || generating ? 'none' : '0 4px 14px rgba(99,102,241,0.4)',
-              }}
+              disabled={isGenerating || !prompt.trim()}
             >
-              {generating ? `⚡ ${t('generating')}` : `🚀 ${t('generate')}（¥${estimateCost.toFixed(2)}）`}
+              {isGenerating ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <span className={styles.spinner} /> 生成中…
+                </span>
+              ) : '🎨 开始生成'}
             </button>
-          )}
-        </div>
+          </div>
 
-        {/* Generation Status */}
-        {currentTaskId && (
-          <GenerationStatus
-            taskId={currentTaskId}
-            onComplete={handleStreamComplete}
-            onError={handleStreamError}
-            onFavorite={handleFavorite}
-          />
-        )}
+          <p className={styles.balanceHint}>余额 <strong>¥9.50</strong> · 预估 ¥0.50</p>
+        </aside>
 
-        {/* Current task outputs */}
-        {taskOutputs.length > 0 && (
-          <section style={{ marginTop: 24 }}>
-            <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('resultThis')}</h2>
-            <ResultGallery
-              images={taskOutputs}
-              onFavorite={(url) => {
-                apiClient.favorites.add(currentTaskId!).then(() => success(tToast('favorited'))).catch(() => error(tToast('favoriteFailed')));
-              }}
-            />
-          </section>
-        )}
+        {/* ── Right Panel: History ── */}
+        <main className={styles.rightPanel}>
+          <div className={styles.historyTopbar}>
+            <div>
+              <span className={styles.historyHeading}>生成历史</span>
+              <span className={styles.historyCount}>{history.length} 条</span>
+            </div>
+            <div className={styles.historyFilter}>
+              {(['全部','图片','收藏'] as const).map((f, i) => {
+                const vals = ['all','图片','收藏'] as const;
+                return <button key={f} className={`${styles.filterBtn} ${filter === vals[i] ? styles.filterBtnActive : ''}`} onClick={() => setFilter(vals[i]!)}>{f}</button>;
+              })}
+            </div>
+          </div>
 
-        {/* Gallery */}
-        {galleryOutputs.length > 0 && (
-          <section style={{ marginTop: 32 }}>
-            <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>
-              📸 {t('resultHistory')} ({galleryOutputs.length})
-            </h2>
-            <ResultGallery images={galleryOutputs} />
-          </section>
-        )}
+          <div className={styles.historyGrid}>
+            {filtered.map(item => (
+              <div key={item.id} className={styles.historyCard}>
+                <img className={styles.historyImg} src={item.img} alt={item.prompt} loading="lazy" />
+                <div className={styles.historyCardBody}>
+                  <span className={styles.historyModelTag}>{item.model}</span>
+                  <p className={styles.historyPrompt}>{item.prompt}</p>
+                </div>
+                <div className={styles.historyCardFooter}>
+                  <span className={styles.historyTime}>{item.time}</span>
+                  <div className={styles.historyActions}>
+                    <button className={styles.histAct}>⬇</button>
+                    <button className={styles.histAct}>⭐</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
-
-      {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </main>
   );
 }
