@@ -2,7 +2,7 @@
 import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useTranslations, useLocale } from 'next-intl';
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 
 const MODELS = [
   { id: 'seedance', icon: '🎬', name: 'Seedance 1.5 Pro', desc: '高质量 · 中文理解强', price: '¥1.5/秒' },
@@ -12,30 +12,98 @@ const DURATIONS = ['5秒', '10秒', '15秒'];
 const RESOLUTIONS = ['720p', '1080p'];
 const CAMERAS = ['固定镜头', '环绕', '推进', '平移'];
 
-const HISTORY = [
-  { id: '1', model: 'Seedance 1.5 Pro · 720p · 5秒', prompt: '无人机穿越峡谷，沉浸式飞行体验', time: '刚刚', img: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=500&q=75' },
-  { id: '2', model: 'Seedance 1.5 Pro · 1080p · 10秒', prompt: '日落海边冲浪，慢动作', time: '3 分钟前', img: 'https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=500&q=75' },
-  { id: '3', model: 'Kling 3.0 · 720p · 5秒', prompt: '城市街道延时摄影', time: '8 分钟前', img: 'https://images.unsplash.com/photo-1514565131-fce0801e5785?w=500&q=75' },
-  { id: '4', model: 'Seedance 1.5 Pro · 720p · 5秒', prompt: '枫叶飘落秋天', time: '15 分钟前', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500&q=75' },
-];
+interface HistoryItem {
+  id: string; model: string; prompt: string; time: string;
+  img: string; status?: 'generating' | 'completed';
+}
 
 export default function VideoPage() {
   const locale = useLocale();
-  const L = (path: string) => `/${locale}${path}`;
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [duration, setDuration] = useState(0);
   const [resolution, setResolution] = useState(0);
   const [camera, setCamera] = useState(0);
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [history, setHistory] = useState(HISTORY);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (!prompt.trim() || isGenerating) return;
+
+    // Get token from localStorage
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      alert('请先登录');
+      return;
+    }
+
+    const tempId = `temp_${Date.now()}`;
+    const durationSec = [5, 10, 15][duration];
+
+    // Add generating card
+    const genCard: HistoryItem = {
+      id: tempId, model: selectedModel!.name, prompt,
+      time: '生成中…', img: '', status: 'generating',
+    };
+    setHistory(prev => [genCard, ...prev]);
     setIsGenerating(true);
-    await new Promise(r => setTimeout(r, 3000));
-    setIsGenerating(false);
-  };
+
+    try {
+      // 1. Create task
+      const res = await fetch('http://localhost:3002/api/v1/tasks/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          model_slug: 'doubao-seedance-1.5-pro',
+          prompt,
+          duration: durationSec,
+          resolution: RESOLUTIONS[resolution],
+        }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || '创建任务失败');
+
+      const { task_id, stream_url } = json.data;
+      const actualStreamUrl = `http://localhost:3002${stream_url}`;
+
+      // 2. Listen SSE
+      const es = new EventSource(actualStreamUrl);
+      eventSourceRef.current = es;
+
+      es.addEventListener('task_processing', () => {
+        setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '处理中…' } : h));
+      });
+
+      es.addEventListener('task_completed', (e) => {
+        const data = JSON.parse(e.data);
+        const videoUrl = data.outputs?.[0]?.url;
+        setHistory(prev => prev.map(h => h.id === tempId ? {
+          ...h, id: task_id, img: videoUrl || '', status: 'completed', time: '刚刚',
+        } : h));
+        setIsGenerating(false);
+        es.close();
+      });
+
+      es.addEventListener('task_failed', (e) => {
+        const data = JSON.parse(e.data);
+        setHistory(prev => prev.filter(h => h.id !== tempId));
+        setIsGenerating(false);
+        alert(`生成失败: ${data.error}`);
+        es.close();
+      });
+
+      es.onerror = () => {
+        es.close();
+        setIsGenerating(false);
+      };
+
+    } catch (err: any) {
+      setHistory(prev => prev.filter(h => h.id !== tempId));
+      setIsGenerating(false);
+      alert(err.message);
+    }
+  }, [prompt, isGenerating, selectedModel, duration, resolution, DURATIONS, RESOLUTIONS]);
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -72,14 +140,18 @@ export default function VideoPage() {
 
           <div className={styles.coreUnit}>
             <div className={styles.promptBox}>
-              <textarea className={styles.promptTextarea} placeholder="描述你想要的视频场景... 例如：无人机穿越峡谷，极速飞行体验" value={prompt} onChange={e => setPrompt(e.target.value)} />
+              <textarea className={styles.promptTextarea}
+                placeholder="描述你想要的视频场景… 例如：无人机穿越峡谷，极速飞行体验"
+                value={prompt} onChange={e => setPrompt(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleGenerate(); }}
+              />
               <div className={styles.promptFooter}><span /><span className={styles.charCount}>{prompt.length} / 1000</span></div>
             </div>
             <button className={styles.generateBtn} onClick={handleGenerate} disabled={isGenerating || !prompt.trim()}>
-              {isGenerating ? <><span className={styles.spinner} /> 生成中…</> : '🎬 开始生成'}
+              {isGenerating ? <><span className={styles.spinner} /> 生成中（等待视频…）</> : '🎬 开始生成'}
             </button>
           </div>
-          <p className={styles.balanceHint}>余额 <strong>¥9.50</strong> · 预估 ¥{DURATIONS[duration]!.replace('秒','')}</p>
+          <p className={styles.balanceHint}>余额 <strong>¥4.84</strong> · 预估 ¥{[5,10,15][duration]! * 1.5}</p>
         </aside>
 
         {/* Right */}
@@ -92,19 +164,32 @@ export default function VideoPage() {
           </div>
           <div className={styles.historyGrid}>
             {history.map(item => (
-              <div key={item.id} className={styles.historyCard}>
-                <img className={styles.historyThumb} src={item.img} alt={item.prompt} loading="lazy" />
-                <div className={styles.historyBody}>
-                  <span className={styles.historyTag}>{item.model}</span>
-                  <p className={styles.historyPrompt}>{item.prompt}</p>
-                </div>
-                <div className={styles.historyFooter}>
-                  <span className={styles.historyTime}>{item.time}</span>
-                  <div className={styles.historyActions}>
-                    <button className={styles.histAct}>⬇</button><button className={styles.histAct}>⭐</button>
+              item.status === 'generating' ? (
+                <div key={item.id} className={`${styles.historyCard} ${styles.generatingCard}`}>
+                  <div className={styles.genHeader}>
+                    <span className={styles.genLabel}>🎬 生成中</span>
+                  </div>
+                  <div className={styles.genPrompt}>{item.prompt}</div>
+                  <div className={styles.genProgressTrack}>
+                    <div className={styles.genProgressBar} style={{ width: '60%' }} />
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div key={item.id} className={styles.historyCard} onClick={() => window.open(item.img, '_blank')}>
+                  <img className={styles.historyThumb} src={item.img} alt={item.prompt} loading="lazy" />
+                  <div className={styles.historyBody}>
+                    <span className={styles.historyTag}>{item.model}</span>
+                    <p className={styles.historyPrompt}>{item.prompt}</p>
+                  </div>
+                  <div className={styles.historyFooter}>
+                    <span className={styles.historyTime}>{item.time}</span>
+                    <div className={styles.historyActions}>
+                      <button className={styles.histAct} onClick={e => { e.stopPropagation(); window.open(item.img, '_blank'); }}>⬇</button>
+                      <button className={styles.histAct}>⭐</button>
+                    </div>
+                  </div>
+                </div>
+              )
             ))}
           </div>
         </main>

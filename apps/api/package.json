@@ -7,7 +7,8 @@
     "dev": "bun run src/server.ts",
     "build": "tsc --project tsconfig.json",
     "start": "bun run dist/server.js",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "worker": "bun run src/workers/video.worker.ts"
   },
   "dependencies": {
     "@ai-toolsite/shared": "workspace:*",

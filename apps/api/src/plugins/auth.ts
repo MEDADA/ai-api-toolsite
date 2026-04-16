@@ -53,7 +53,8 @@ export async function authenticate(
     }
 
     // Check Redis blacklist for revoked tokens
-    const redis = (fastify as FastifyInstance & { redis?: { get: (k: string) => Promise<string | null> } }).redis;
+    const server = req.server as FastifyInstance;
+    const redis = (server as any).redis;
     if (redis) {
       const blacklisted = await redis.get(`auth:blacklist:${decoded.jti}`);
       if (blacklisted) {
