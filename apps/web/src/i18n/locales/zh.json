@@ -30,6 +30,10 @@
     "badge": {
       "hot": "热门",
       "new": "新品"
+    },
+    "sectionTitle": {
+      "start": "开始创作",
+      "hotModels": "作品展示"
     }
   },
   "footer": {

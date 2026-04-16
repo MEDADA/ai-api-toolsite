@@ -30,6 +30,10 @@
     "badge": {
       "hot": "Hot",
       "new": "New"
+    },
+    "sectionTitle": {
+      "start": "Start Creating",
+      "hotModels": "Gallery"
     }
   },
   "footer": {
