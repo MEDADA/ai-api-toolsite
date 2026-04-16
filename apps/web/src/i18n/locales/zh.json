@@ -14,26 +14,26 @@
     "heroSubtitleExtra": "无需 API Key，按次计费，新用户赠送 5 元体验金",
     "ctaPrimary": "立即体验 →",
     "ctaSecondary": "查看我的创作",
-    "sectionTitle.start": "开始创作",
-    "sectionTitle.hotModels": "热门模型",
-    "badge.hot": "热门",
-    "badge.new": "新品",
-    "model.type.image": "图片",
-    "model.type.video": "视频",
-    "model.type.audio": "语音",
-    "nav": {
-      "image": "图片生成",
-      "video": "视频生成",
-      "audio": "语音生成",
-      "dashboard": "用户中心"
+    "sectionTitle": {
+      "start": "开始创作",
+      "hotModels": "作品展示"
     },
     "badge": {
       "hot": "热门",
       "new": "新品"
     },
-    "sectionTitle": {
-      "start": "开始创作",
-      "hotModels": "作品展示"
+    "model": {
+      "type": {
+        "image": "图片",
+        "video": "视频",
+        "audio": "语音"
+      }
+    },
+    "nav": {
+      "image": "图片生成",
+      "video": "视频生成",
+      "audio": "语音生成",
+      "dashboard": "用户中心"
     }
   },
   "footer": {
@@ -42,8 +42,10 @@
   "image": {
     "title": "图片生成",
     "subtitle": "文生图 / 图生图，多种风格模型可选",
-    "mode.text2img": "🎨 文生图",
-    "mode.img2img": "🖼️ 图生图",
+    "mode": {
+      "text2img": "🎨 文生图",
+      "img2img": "🖼️ 图生图"
+    },
     "modelLabel": "选择模型",
     "promptLabel": "图片描述",
     "refImage": "参考图",
@@ -82,9 +84,11 @@
   "audio": {
     "title": "语音生成",
     "subtitle": "TTS 文字转语音 / ASR 语音转文字 / 声音克隆",
-    "tab.tts": "TTS 文字转语音",
-    "tab.asr": "ASR 语音转文字",
-    "tab.clone": "声音克隆",
+    "tab": {
+      "tts": "TTS 文字转语音",
+      "asr": "ASR 语音转文字",
+      "clone": "声音克隆"
+    },
     "voiceLabel": "选择音色",
     "textLabel": "输入文本",
     "textPlaceholder": "输入要转换的文字，例如：欢迎使用 AI 工具站，一站式生成优质内容",
@@ -125,19 +129,23 @@
     "balanceStatus": "余额状态",
     "balanceOk": "正常",
     "balanceLow": "不足",
-    "tab.history": "生成历史",
-    "tab.balance": "充值记录",
-    "tab.favorites": "收藏夹",
+    "tab": {
+      "history": "生成历史",
+      "balance": "充值记录",
+      "favorites": "收藏夹"
+    },
     "emptyHistory": "还没有创作记录",
     "goGenerate": "去生成第一张图片 →",
     "emptyFavorites": "收藏夹为空",
     "goCreate": "去生成图片 →",
     "favoritesCount": "共 {count} 个收藏",
-    "taskSuffix.image": "图片",
-    "taskSuffix.video": "视频",
-    "taskSuffix.tts": "TTS",
-    "taskSuffix.asr": "ASR",
-    "taskSuffix.clone": "克隆"
+    "taskSuffix": {
+      "image": "图片",
+      "video": "视频",
+      "tts": "TTS",
+      "asr": "ASR",
+      "clone": "克隆"
+    }
   },
   "login": {
     "titlePhone": "登录 / 注册",

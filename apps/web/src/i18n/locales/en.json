@@ -14,26 +14,26 @@
     "heroSubtitleExtra": "No API Key needed, pay per use. New users get ¥5 free credit",
     "ctaPrimary": "Try Now →",
     "ctaSecondary": "View My Creations",
-    "sectionTitle.start": "Start Creating",
-    "sectionTitle.hotModels": "Popular Models",
-    "badge.hot": "Hot",
-    "badge.new": "New",
-    "model.type.image": "Image",
-    "model.type.video": "Video",
-    "model.type.audio": "Audio",
-    "nav": {
-      "image": "Image Generation",
-      "video": "Video Generation",
-      "audio": "Audio Generation",
-      "dashboard": "Dashboard"
+    "sectionTitle": {
+      "start": "Start Creating",
+      "hotModels": "Gallery"
     },
     "badge": {
       "hot": "Hot",
       "new": "New"
     },
-    "sectionTitle": {
-      "start": "Start Creating",
-      "hotModels": "Gallery"
+    "model": {
+      "type": {
+        "image": "Image",
+        "video": "Video",
+        "audio": "Audio"
+      }
+    },
+    "nav": {
+      "image": "Image Generation",
+      "video": "Video Generation",
+      "audio": "Audio Generation",
+      "dashboard": "Dashboard"
     }
   },
   "footer": {
@@ -42,8 +42,10 @@
   "image": {
     "title": "Image Generation",
     "subtitle": "Text-to-image and image-to-image, multiple style models available",
-    "mode.text2img": "🎨 Text2Image",
-    "mode.img2img": "🖼️ Image2Image",
+    "mode": {
+      "text2img": "🎨 Text2Image",
+      "img2img": "🖼️ Image2Image"
+    },
     "modelLabel": "Select Model",
     "promptLabel": "Image Description",
     "refImage": "Reference Image",
@@ -82,9 +84,11 @@
   "audio": {
     "title": "Audio Generation",
     "subtitle": "TTS Text-to-Speech / ASR Speech-to-Text / Voice Clone",
-    "tab.tts": "TTS Text-to-Speech",
-    "tab.asr": "ASR Speech-to-Text",
-    "tab.clone": "Voice Clone",
+    "tab": {
+      "tts": "TTS Text-to-Speech",
+      "asr": "ASR Speech-to-Text",
+      "clone": "Voice Clone"
+    },
     "voiceLabel": "Select Voice",
     "textLabel": "Input Text",
     "textPlaceholder": "Enter text to convert, e.g.: Welcome to AI Toolsite, one-stop quality content generation",
@@ -125,19 +129,23 @@
     "balanceStatus": "Balance Status",
     "balanceOk": "OK",
     "balanceLow": "Low",
-    "tab.history": "Generation History",
-    "tab.balance": "Recharge History",
-    "tab.favorites": "Favorites",
+    "tab": {
+      "history": "Generation History",
+      "balance": "Recharge History",
+      "favorites": "Favorites"
+    },
     "emptyHistory": "No creation records yet",
     "goGenerate": "Generate your first image →",
     "emptyFavorites": "Favorites is empty",
     "goCreate": "Go generate images →",
     "favoritesCount": "{count} favorites",
-    "taskSuffix.image": "Image",
-    "taskSuffix.video": "Video",
-    "taskSuffix.tts": "TTS",
-    "taskSuffix.asr": "ASR",
-    "taskSuffix.clone": "Clone"
+    "taskSuffix": {
+      "image": "Image",
+      "video": "Video",
+      "tts": "TTS",
+      "asr": "ASR",
+      "clone": "Clone"
+    }
   },
   "login": {
     "titlePhone": "Login / Register",
