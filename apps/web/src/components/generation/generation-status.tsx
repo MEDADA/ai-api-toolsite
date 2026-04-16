@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
 import type { SSECompleted, SSEFailed, SSEProgress, SSETaskQueued, SSETaskStarted } from '@/lib/shared-types';
+import { useTranslations } from 'next-intl';
 
 interface GenerationStatusProps {
   taskId: string;
@@ -23,9 +24,11 @@ export function GenerationStatus({
   onFavorite,
   onRegenerate,
 }: GenerationStatusProps) {
+  const t = useTranslations('status');
+  const tToast = useTranslations('toast');
   const [status, setStatus] = useState<Status>('queued');
   const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState('排队中...');
+  const [message, setMessage] = useState(t('queuedMsg', { position: '?' }));
   const [outputs, setOutputs] = useState<Array<{ url: string; thumbnail_url?: string; width?: number; height?: number }>>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -41,7 +44,6 @@ export function GenerationStatus({
   }, []);
 
   useEffect(() => {
-    // Try SSE stream
     if (streamUrl) {
       const es = new EventSource(streamUrl);
       esRef.current = es;
@@ -49,27 +51,27 @@ export function GenerationStatus({
       es.addEventListener('queued', (e: MessageEvent) => {
         const data = JSON.parse(e.data) as SSETaskQueued;
         setStatus('queued');
-        setMessage(`排队中，位置 ${data.position ?? '?'}`);
+        setMessage(t('queuedMsg', { position: data.position?.toString() ?? '?' }));
       });
 
       es.addEventListener('started', (e: MessageEvent) => {
         const data = JSON.parse(e.data) as SSETaskStarted;
         setStatus('started');
-        setMessage('开始生成...');
+        setMessage(t('startedMsg'));
       });
 
       es.addEventListener('progress', (e: MessageEvent) => {
         const data = JSON.parse(e.data) as SSEProgress;
         setStatus('progress');
         setProgress(data.progress);
-        setMessage(data.message ?? `生成中 ${data.progress}%`);
+        setMessage(t('progressMsg', { progress: data.progress.toString() }));
       });
 
       es.addEventListener('completed', (e: MessageEvent) => {
         const data = JSON.parse(e.data) as SSECompleted;
         setStatus('completed');
         setProgress(100);
-        setMessage('生成完成！');
+        setMessage(t('completedMsg'));
         setOutputs(data.outputs);
         onComplete?.(data.outputs);
         es.close();
@@ -84,14 +86,12 @@ export function GenerationStatus({
       });
 
       es.onerror = (): void => {
-        // SSE failed — fall back to polling
         es.close();
         pollTask();
       };
 
       return () => es.close();
     } else {
-      // Fallback: poll
       pollTask();
       return undefined;
     }
@@ -103,40 +103,48 @@ export function GenerationStatus({
         const task = await apiClient.tasks.get(taskId);
         if (task.status === 'QUEUED') {
           setStatus('queued');
-          setMessage('排队中...');
+          setMessage(t('queuedMsg', { position: '?' }));
         } else if (task.status === 'PROCESSING') {
           setStatus('progress');
-          setProgress(50); // no real progress from polling
-          setMessage('生成中...');
+          setProgress(50);
+          setMessage(t('progressMsg', { progress: '50' }));
         } else if (task.status === 'SUCCEEDED') {
           setStatus('completed');
           setProgress(100);
-          setMessage('生成完成！');
+          setMessage(t('completedMsg'));
           setOutputs(task.outputs);
           onComplete?.(task.outputs as SSECompleted['outputs']);
           return;
         } else if (task.status === 'FAILED') {
           setStatus('failed');
-          setErrorMsg('生成失败');
-          onError?.('生成失败');
+          setErrorMsg(t('failedMsg'));
+          onError?.(t('failedMsg'));
           return;
         }
-        // Schedule next poll
         setTimeout(poll, 3000);
       } catch {
         setStatus('failed');
-        setErrorMsg('查询任务失败');
+        setErrorMsg(tToast('queryFailed'));
       }
     };
     poll();
   };
 
   const formatTime = (s: number) => {
-    if (s < 60) return `${s}秒`;
-    return `${Math.floor(s / 60)}分${s % 60}秒`;
+    const locale = typeof window !== 'undefined' ? navigator.language : 'zh-CN';
+    if (s < 60) return `${s}${t('seconds')}`;
+    return `${Math.floor(s / 60)}${t('minutes')}${s % 60}${t('seconds')}`;
   };
 
   const eta = progress > 0 ? Math.round((elapsed / progress) * (100 - progress)) : null;
+
+  const statusLabel = {
+    queued: t('queued'),
+    started: t('started'),
+    progress: t('progress'),
+    completed: t('completed'),
+    failed: t('failed'),
+  }[status];
 
   return (
     <div
@@ -159,10 +167,7 @@ export function GenerationStatus({
           }}
         />
         <span style={{ color: '#e2e8f0', fontSize: 15, fontWeight: 600 }}>
-          {status === 'queued' ? '📋 排队中' :
-           status === 'started' ? '🚀 开始生成' :
-           status === 'progress' ? '⚡ 生成中' :
-           status === 'completed' ? '✅ 完成' : '❌ 失败'}
+          {statusLabel}
         </span>
         <span style={{ color: '#64748b', fontSize: 13, marginLeft: 'auto' }}>
           {formatTime(elapsed)}
@@ -188,7 +193,7 @@ export function GenerationStatus({
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b' }}>
             <span>{message}</span>
-            {eta !== null && <span>预计剩余 {formatTime(eta)}</span>}
+            {eta !== null && <span>{t('remaining')} {formatTime(eta)}</span>}
           </div>
         </div>
       )}
@@ -213,7 +218,7 @@ export function GenerationStatus({
               <div key={i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden' }}>
                 <img
                   src={o.thumbnail_url ?? o.url}
-                  alt={`结果 ${i + 1}`}
+                  alt={`${t('result')} ${i + 1}`}
                   style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', display: 'block' }}
                 />
                 <div
@@ -231,7 +236,7 @@ export function GenerationStatus({
                       color: '#fff', fontSize: 12, textDecoration: 'none',
                     }}
                   >
-                    ⬇️ 下载
+                    ⬇️ {t('download')}
                   </a>
                   <button
                     onClick={() => onFavorite?.(taskId)}
@@ -240,7 +245,7 @@ export function GenerationStatus({
                       color: '#fff', border: 'none', fontSize: 12, cursor: 'pointer',
                     }}
                   >
-                    ⭐ 收藏
+                    ⭐ {t('favorite')}
                   </button>
                 </div>
               </div>
@@ -255,7 +260,7 @@ export function GenerationStatus({
                 fontSize: 13, cursor: 'pointer',
               }}
             >
-              🔄 重新生成
+              🔄 {t('regenerate')}
             </button>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
+import { useTranslations } from 'next-intl';
 
 interface Model {
   id: string;
@@ -27,7 +28,10 @@ interface ModelSelectorProps {
   onChange: (slug: string) => void;
 }
 
+const TAB_OPTIONS = ['text2img', 'img2img'] as const;
+
 export function ModelSelector({ type, value, onChange }: ModelSelectorProps) {
+  const tm = useTranslations('modelSelector');
   const [tab, setTab] = useState<'text2img' | 'img2img'>('text2img');
   const [models, setModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +43,7 @@ export function ModelSelector({ type, value, onChange }: ModelSelectorProps) {
         const res = await apiClient.models.list(type);
         setModels(res.models as unknown as Model[]);
       } catch {
-        // Fallback to empty — will show no models available
+        // Fallback to empty
       } finally {
         setLoading(false);
       }
@@ -57,28 +61,28 @@ export function ModelSelector({ type, value, onChange }: ModelSelectorProps) {
       {/* Tab switcher for image type */}
       {type === 'image' && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          {(['text2img', 'img2img'] as const).map((t) => (
+          {TAB_OPTIONS.map((tabKey) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
               style={{
                 padding: '6px 16px', borderRadius: 20, border: '1px solid',
-                borderColor: tab === t ? '#6366f1' : 'rgba(255,255,255,0.15)',
-                background: tab === t ? 'rgba(99,102,241,0.15)' : 'transparent',
-                color: tab === t ? '#a5b4fc' : '#64748b', fontSize: 14,
+                borderColor: tab === tabKey ? '#6366f1' : 'rgba(255,255,255,0.15)',
+                background: tab === tabKey ? 'rgba(99,102,241,0.15)' : 'transparent',
+                color: tab === tabKey ? '#a5b4fc' : '#64748b', fontSize: 14,
                 cursor: 'pointer', transition: 'all 0.2s',
               }}
             >
-              {t === 'text2img' ? '🎨 文生图' : '🖼️ 图生图'}
+              {tabKey === 'text2img' ? tm('text2img') : tm('img2img')}
             </button>
           ))}
         </div>
       )}
 
       {loading ? (
-        <div style={{ color: '#64748b', fontSize: 14 }}>加载模型中...</div>
+        <div style={{ color: '#64748b', fontSize: 14 }}>{tm('loading')}</div>
       ) : filtered.length === 0 ? (
-        <div style={{ color: '#64748b', fontSize: 14 }}>暂无可用模型</div>
+        <div style={{ color: '#64748b', fontSize: 14 }}>{tm('noModels')}</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
           {filtered.map((m) => (

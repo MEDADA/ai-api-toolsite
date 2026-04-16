@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from 'next-intl';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -11,6 +12,8 @@ interface LoginModalProps {
 export function LoginModal({ onClose }: LoginModalProps) {
   const { login, sendCode } = useAuth();
   const { success, error } = useToast();
+  const t = useTranslations('login');
+  const tToast = useTranslations('toast');
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
@@ -19,13 +22,13 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
   const handleSendCode = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      error('请输入正确的手机号');
+      error(tToast('invalidPhone'));
       return;
     }
     setLoading(true);
     try {
       await sendCode(phone);
-      success('验证码已发送');
+      success(tToast('codeSent'));
       setStep('code');
       setCountdown(60);
       const timer = setInterval(() => {
@@ -35,7 +38,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         });
       }, 1000);
     } catch (e) {
-      error((e as Error).message || '发送失败');
+      error((e as Error).message || tToast('sendFailed'));
     } finally {
       setLoading(false);
     }
@@ -43,16 +46,16 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
   const handleLogin = async () => {
     if (code.length !== 6) {
-      error('请输入6位验证码');
+      error(tToast('invalidCode'));
       return;
     }
     setLoading(true);
     try {
       await login(phone, code);
-      success('登录成功');
+      success(tToast('loginSuccess'));
       onClose();
     } catch (e) {
-      error((e as Error).message || '登录失败');
+      error(tToast('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -73,14 +76,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
         }}
       >
         <h2 style={{ color: '#e2e8f0', marginBottom: 24, fontSize: 20, fontWeight: 700 }}>
-          {step === 'phone' ? '登录 / 注册' : '输入验证码'}
+          {step === 'phone' ? t('titlePhone') : t('titleCode')}
         </h2>
 
         {step === 'phone' ? (
           <>
             <input
               type="tel"
-              placeholder="请输入手机号"
+              placeholder={t('phonePlaceholder')}
               value={phone}
               onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
               maxLength={11}
@@ -101,23 +104,23 @@ export function LoginModal({ onClose }: LoginModalProps) {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? '发送中...' : '获取验证码'}
+              {loading ? t('sending') : t('sendCode')}
             </button>
           </>
         ) : (
           <>
             <p style={{ color: '#94a3b8', marginBottom: 16, fontSize: 14 }}>
-              验证码已发送至 <strong style={{ color: '#e2e8f0' }}>{phone}</strong>
+              {t('codeSentTo')} <strong style={{ color: '#e2e8f0' }}>{phone}</strong>
               <button
                 onClick={() => setStep('phone')}
                 style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', marginLeft: 8, fontSize: 13 }}
               >
-                重新输入
+                {t('reenter')}
               </button>
             </p>
             <input
               type="text"
-              placeholder="请输入6位验证码"
+              placeholder={t('codePlaceholder')}
               value={code}
               onChange={(e) => setCode((e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6))}
               maxLength={6}
@@ -138,7 +141,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
                 opacity: loading ? 0.7 : 1, marginBottom: 8,
               }}
             >
-              {loading ? '登录中...' : '确认登录'}
+              {loading ? t('loggingIn') : t('confirmLogin')}
             </button>
             <button
               onClick={handleSendCode}
@@ -150,7 +153,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
                 cursor: countdown > 0 ? 'default' : 'pointer',
               }}
             >
-              {countdown > 0 ? `${countdown}秒后可重新发送` : '重新发送验证码'}
+              {countdown > 0 ? t('resendAfter', { seconds: countdown.toString() }) : t('resendCode')}
             </button>
           </>
         )}
@@ -162,7 +165,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             cursor: 'pointer', fontSize: 13, width: '100%', textAlign: 'center',
           }}
         >
-          取消
+          {t('cancel')}
         </button>
       </div>
     </div>

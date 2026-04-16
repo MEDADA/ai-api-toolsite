@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 
 interface GenerationButtonProps {
   estimate: number; // in yuan
@@ -18,6 +19,7 @@ export function GenerationButton({
   loading,
   label,
 }: GenerationButtonProps) {
+  const t = useTranslations('image');
   const insufficient = balance !== null && balance < estimate;
 
   if (insufficient) {
@@ -25,7 +27,7 @@ export function GenerationButton({
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ flex: 1 }}>
           <div style={{ color: '#94a3b8', fontSize: 14 }}>
-            预估费用：<strong style={{ color: '#f59e0b' }}>¥{estimate.toFixed(2)}</strong>
+            {t('estimate') ?? '预估费用'}：<strong style={{ color: '#f59e0b' }}>¥{estimate.toFixed(2)}</strong>
           </div>
           <div style={{ color: '#ef4444', fontSize: 12, marginTop: 2 }}>
             余额不足（当前余额 ¥{(balance ?? 0).toFixed(2)}）
@@ -50,17 +52,14 @@ export function GenerationButton({
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       {balance !== null && (
         <div style={{ color: '#94a3b8', fontSize: 14 }}>
-          预估费用：<strong style={{ color: '#e2e8f0' }}>¥{estimate.toFixed(2)}</strong>
-          {balance !== null && (
-            <span style={{ color: '#64748b', marginLeft: 8 }}>
-              余额 ¥{balance.toFixed(2)}
-            </span>
-          )}
+          {t('estimate') ?? '预估费用'}：<strong style={{ color: '#e2e8f0' }}>¥{estimate.toFixed(2)}</strong>
+          <span style={{ color: '#64748b', marginLeft: 8 }}>
+            余额 ¥{balance.toFixed(2)}
+          </span>
         </div>
       )}
       <button
         disabled={disabled || loading}
-        onClick={undefined} // caller passes onClick via disabled pattern
         style={{
           padding: '12px 28px', borderRadius: 10,
           background: disabled || loading
@@ -73,7 +72,7 @@ export function GenerationButton({
           whiteSpace: 'nowrap',
         }}
       >
-        {loading ? '⚡ 生成中...' : label ?? `🚀 生成（¥${estimate.toFixed(2)}）`}
+        {loading ? `⚡ ${t('generating')}` : label ?? `🚀 ${t('generate')}（¥${estimate.toFixed(2)}）`}
       </button>
     </div>
   );

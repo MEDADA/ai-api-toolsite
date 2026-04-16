@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 const SIZES = [
   { label: '512×512', width: '512', height: '512' },
@@ -10,9 +11,9 @@ const SIZES = [
 ];
 
 const QUALITY_OPTIONS = [
-  { value: 'fast', label: '⚡ 快速', steps: 20, badge: null },
-  { value: 'standard', label: '✨ 标准', steps: 30, badge: null },
-  { value: 'high', label: '🔥 高质量', steps: 50, badge: '推荐' },
+  { value: 'fast', labelKey: 'params.fast', steps: 20, badgeKey: null },
+  { value: 'standard', labelKey: 'params.standard', steps: 30, badgeKey: null },
+  { value: 'high', labelKey: 'params.highQuality', steps: 50, badgeKey: 'params.recommended' },
 ];
 
 const COUNT_OPTIONS = [1, 2, 4];
@@ -32,16 +33,14 @@ export function ImageParams({
   width, height, steps, imageCount,
   onWidthChange, onHeightChange, onStepsChange, onImageCountChange,
 }: ImageParamsProps) {
-  const selectedSize = SIZES.find(
-    (s) => s.width === width && s.height === height
-  );
+  const t = useTranslations();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Size Grid */}
       <div>
         <label style={{ display: 'block', color: '#94a3b8', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
-          尺寸
+          {t('params.size')}
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           {SIZES.map((s) => {
@@ -68,7 +67,7 @@ export function ImageParams({
       {/* Quality */}
       <div>
         <label style={{ display: 'block', color: '#94a3b8', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
-          质量档位
+          {t('params.quality')}
         </label>
         <div style={{ display: 'flex', gap: 10 }}>
           {QUALITY_OPTIONS.map((q) => {
@@ -85,14 +84,14 @@ export function ImageParams({
                   cursor: 'pointer', transition: 'all 0.2s', position: 'relative',
                 }}
               >
-                {q.label}
-                {q.badge && (
+                {t(q.labelKey)}
+                {q.badgeKey && (
                   <span style={{
                     position: 'absolute', top: -8, right: -8,
                     background: '#f59e0b', color: '#000', fontSize: 10,
                     padding: '2px 6px', borderRadius: 10, fontWeight: 700,
                   }}>
-                    {q.badge}
+                    {t(q.badgeKey)}
                   </span>
                 )}
               </button>
@@ -104,7 +103,7 @@ export function ImageParams({
       {/* Count */}
       <div>
         <label style={{ display: 'block', color: '#94a3b8', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
-          生成张数
+          {t('params.count')}
         </label>
         <div style={{ display: 'flex', gap: 10 }}>
           {COUNT_OPTIONS.map((n) => {

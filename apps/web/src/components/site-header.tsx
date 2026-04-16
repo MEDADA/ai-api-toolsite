@@ -2,11 +2,15 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/auth-context';
 import { LoginModal } from './login-modal';
+import { LanguageSwitcher } from './language-switcher';
 
 export function SiteHeader() {
   const { isLoggedIn, user, balance, logout } = useAuth();
+  const t = useTranslations('nav');
+  const tDashboard = useTranslations('dashboard');
   const [showLogin, setShowLogin] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -38,15 +42,15 @@ export function SiteHeader() {
             }}
           >
             <span style={{ fontSize: 22 }}>🎨</span>
-            <span>AI 工具站</span>
+            <span>{t('image').split(' ')[0] === '图片' ? 'AI 工具站' : 'AI Toolsite'}</span>
           </Link>
 
           {/* Nav */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {[
-              { href: '/image', label: '图片生成' },
-              { href: '/video', label: '视频生成' },
-              { href: '/audio', label: '语音生成' },
+              { href: '/image', label: t('image') },
+              { href: '/video', label: t('video') },
+              { href: '/audio', label: t('audio') },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -60,6 +64,9 @@ export function SiteHeader() {
                 {item.label}
               </Link>
             ))}
+
+            {/* Language Switcher */}
+            <LanguageSwitcher />
 
             {/* Auth section */}
             {isLoggedIn ? (
@@ -111,9 +118,9 @@ export function SiteHeader() {
                       }}
                     >
                       {[
-                        { href: '/dashboard', label: '📊 用户中心' },
-                        { href: '/dashboard?tab=balance', label: '💰 余额充值' },
-                        { href: '/dashboard?tab=favorites', label: '⭐ 收藏夹' },
+                        { href: '/dashboard', label: `📊 ${tDashboard('tab.history')}` },
+                        { href: '/dashboard?tab=balance', label: '💰 ' + tDashboard('tab.balance') },
+                        { href: '/dashboard?tab=favorites', label: '⭐ ' + tDashboard('tab.favorites') },
                       ].map((item) => (
                         <Link
                           key={item.href}
@@ -142,7 +149,7 @@ export function SiteHeader() {
                           cursor: 'pointer',
                         }}
                       >
-                        🚪 退出登录
+                        🚪 {t('logout')}
                       </button>
                     </div>
                   </>
@@ -158,7 +165,7 @@ export function SiteHeader() {
                   boxShadow: '0 2px 8px rgba(99,102,241,0.4)',
                 }}
               >
-                登录
+                {t('login')}
               </button>
             )}
           </nav>

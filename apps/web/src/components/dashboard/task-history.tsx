@@ -4,31 +4,41 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import type { TaskDetailResponse } from '@/lib/shared-types';
+import { useTranslations } from 'next-intl';
 
-const TABS = ['全部', '🎨 图片', '🎬 视频', '🎙️ 语音'] as const;
-type Tab = typeof TABS[number];
+const TABS_KEY = ['all', 'image', 'video', 'audio'] as const;
+type Tab = typeof TABS_KEY[number];
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  SUCCEEDED: { label: '✅ 成功', color: '#22c55e', bg: '#22c55e22' },
-  PROCESSING: { label: '⏳ 处理中', color: '#3b82f6', bg: '#3b82f622' },
-  QUEUED: { label: '📋 排队中', color: '#f59e0b', bg: '#f59e0b22' },
-  FAILED: { label: '❌ 失败', color: '#ef4444', bg: '#ef444422' },
-  CANCELLED: { label: '🚫 已取消', color: '#64748b', bg: '#64748b22' },
-  CREATED: { label: '🆕 已创建', color: '#8b5cf6', bg: '#8b5cf622' },
-  REFUND_PENDING: { label: '↩️ 退款中', color: '#06b6d4', bg: '#06b6d422' },
-  REFUNDED: { label: '↩️ 已退款', color: '#06b6d4', bg: '#06b6d422' },
+const STATUS_CONFIG: Record<string, { labelKey: string; color: string; bg: string }> = {
+  SUCCEEDED: { labelKey: 'status.completed', color: '#22c55e', bg: '#22c55e22' },
+  PROCESSING: { labelKey: 'status.progress', color: '#3b82f6', bg: '#3b82f622' },
+  QUEUED: { labelKey: 'status.queued', color: '#f59e0b', bg: '#f59e0b22' },
+  FAILED: { labelKey: 'status.failed', color: '#ef4444', bg: '#ef444422' },
+  CANCELLED: { labelKey: 'status.cancelled', color: '#64748b', bg: '#64748b22' },
+  CREATED: { labelKey: 'status.created', color: '#8b5cf6', bg: '#8b5cf622' },
+  REFUND_PENDING: { labelKey: 'status.refundPending', color: '#06b6d4', bg: '#06b6d422' },
+  REFUNDED: { labelKey: 'status.refunded', color: '#06b6d4', bg: '#06b6d422' },
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  IMAGE: '🎨 图片',
-  VIDEO: '🎬 视频',
-  TTS: '🎙️ TTS',
-  ASR: '📝 ASR',
-  VOICE_CLONE: '🔊 克隆',
+const TYPE_LABEL_KEY: Record<string, string> = {
+  IMAGE: 'dashboard.taskSuffix.image',
+  VIDEO: 'dashboard.taskSuffix.video',
+  TTS: 'dashboard.taskSuffix.tts',
+  ASR: 'dashboard.taskSuffix.asr',
+  VOICE_CLONE: 'dashboard.taskSuffix.clone',
+};
+
+const TAB_ICONS: Record<string, string> = {
+  all: '全部',
+  image: '🎨 图片',
+  video: '🎬 视频',
+  audio: '🎙️ 语音',
 };
 
 export function TaskHistory() {
-  const [tab, setTab] = useState<Tab>('全部');
+  const t = useTranslations();
+  const th = useTranslations('taskHistory');
+  const [tab, setTab] = useState<Tab>('all');
   const [tasks, setTasks] = useState<TaskDetailResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -36,7 +46,7 @@ export function TaskHistory() {
 
   useEffect(() => {
     setLoading(true);
-    const typeFilter = tab === '全部' ? undefined : tab.replace(/^[^\s]+\s/, '') as TaskDetailResponse['task_type'];
+    const typeFilter = tab === 'all' ? undefined : (tab === 'image' ? 'IMAGE' : tab === 'video' ? 'VIDEO' : 'TTS') as TaskDetailResponse['task_type'];
 
     apiClient.tasks.list({
       ...(typeFilter ? { type: typeFilter } : {}),
@@ -51,11 +61,16 @@ export function TaskHistory() {
       .finally(() => setLoading(false));
   }, [tab, page]);
 
+  const tabLabel = (key: Tab) => {
+    if (key === 'all') return th('loading').includes('加载') ? '全部' : 'All';
+    return TAB_ICONS[key] || key;
+  };
+
   return (
     <div>
       {/* Tab filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {TABS.map((t) => (
+        {TABS_KEY.map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); setPage(1); }}
@@ -67,13 +82,13 @@ export function TaskHistory() {
               cursor: 'pointer',
             }}
           >
-            {t}
+            {tabLabel(t)}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div style={{ color: '#64748b', textAlign: 'center', padding: 40 }}>加载中...</div>
+        <div style={{ color: '#64748b', textAlign: 'center', padding: 40 }}>{th('loading')}</div>
       ) : tasks.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 48, color: '#64748b' }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
@@ -85,9 +100,8 @@ export function TaskHistory() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {tasks.map((task) => {
-            const statusCfg = STATUS_CONFIG[task.status] ?? { label: task.status, color: '#64748b', bg: '#64748b22' };
+            const statusCfg = STATUS_CONFIG[task.status] ?? { labelKey: task.status, color: '#64748b', bg: '#64748b22' };
             const thumb = task.outputs?.[0]?.thumbnail_url ?? task.outputs?.[0]?.url;
-            const isVideo = task.task_type === 'VIDEO' && task.outputs?.[0]?.duration;
             const isAudio = ['TTS', 'ASR', 'VOICE_CLONE'].includes(task.task_type);
 
             return (
@@ -119,7 +133,7 @@ export function TaskHistory() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 20, color: '#64748b',
                     }}>
-                      {TYPE_LABEL[task.task_type]?.charAt(0) ?? '?'}
+                      {TYPE_LABEL_KEY[task.task_type]?.charAt(0) ?? '?'}
                     </div>
                   )}
                 </div>
@@ -130,7 +144,7 @@ export function TaskHistory() {
                     {task.model_slug}
                   </div>
                   <div style={{ color: '#64748b', fontSize: 12 }}>
-                    {TYPE_LABEL[task.task_type] ?? task.task_type} · ¥{(task.total_cost / 100).toFixed(2)}
+                    {t(TYPE_LABEL_KEY[task.task_type] ?? 'dashboard.taskSuffix.image')} · ¥{(task.total_cost / 100).toFixed(2)}
                     {task.completed_at && ` · ${new Date(task.completed_at).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`}
                   </div>
                 </div>
@@ -141,7 +155,7 @@ export function TaskHistory() {
                   color: statusCfg.color, background: statusCfg.bg,
                   flexShrink: 0,
                 }}>
-                  {statusCfg.label}
+                  {t(statusCfg.labelKey)}
                 </span>
               </div>
             );
@@ -162,7 +176,7 @@ export function TaskHistory() {
               cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1,
             }}
           >
-            上一页
+            {th('prevPage')}
           </button>
           <span style={{ color: '#64748b', fontSize: 13, padding: '6px 12px' }}>
             {page} / {totalPages}
@@ -178,7 +192,7 @@ export function TaskHistory() {
               opacity: page === totalPages ? 0.5 : 1,
             }}
           >
-            下一页
+            {th('nextPage')}
           </button>
         </div>
       )}
