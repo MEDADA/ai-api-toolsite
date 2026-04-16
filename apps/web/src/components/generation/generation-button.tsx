@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface GenerationButtonProps {
   estimate: number; // in yuan
@@ -20,6 +20,8 @@ export function GenerationButton({
   label,
 }: GenerationButtonProps) {
   const t = useTranslations('image');
+  const locale = useLocale();
+  const L = (path: string) => `/${locale}${path}`;
   const insufficient = balance !== null && balance < estimate;
 
   if (insufficient) {
@@ -34,7 +36,7 @@ export function GenerationButton({
           </div>
         </div>
         <Link
-          href="/dashboard"
+          href={L("/dashboard")}
           style={{
             padding: '12px 20px', borderRadius: 10,
             background: 'linear-gradient(135deg, #f59e0b, #d97706)',

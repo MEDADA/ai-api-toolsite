@@ -336,6 +336,8 @@ model GenerationTask {
   provider_channel_id String?
   retry_count         Int        @default(0)
 
+  provider_channel ProviderChannel? @relation(fields: [provider_channel_id], references: [id])
+
   queued_at      DateTime?
   started_at     DateTime?
   completed_at   DateTime?

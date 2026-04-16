@@ -4,16 +4,16 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 
 const SIZES = [
-  { label: '512×512', width: '512', height: '512' },
-  { label: '768×768', width: '768', height: '768' },
-  { label: '1024×1024', width: '1024', height: '1024' },
-  { label: '1080×1920', width: '1080', height: '1920' },
+  { label: '512²', width: '512', height: '512' },
+  { label: '768²', width: '768', height: '768' },
+  { label: '1024²', width: '1024', height: '1024' },
+  { label: '9:16', width: '1080', height: '1920' },
 ];
 
 const QUALITY_OPTIONS = [
-  { value: 'fast', labelKey: 'params.fast', steps: 20, badgeKey: null },
-  { value: 'standard', labelKey: 'params.standard', steps: 30, badgeKey: null },
-  { value: 'high', labelKey: 'params.highQuality', steps: 50, badgeKey: 'params.recommended' },
+  { value: 'fast', labelKey: 'params.fast', steps: 20 },
+  { value: 'standard', labelKey: 'params.standard', steps: 30 },
+  { value: 'high', labelKey: 'params.highQuality', steps: 50 },
 ];
 
 const COUNT_OPTIONS = [1, 2, 4];
@@ -35,96 +35,86 @@ export function ImageParams({
 }: ImageParamsProps) {
   const t = useTranslations();
 
+  const btnStyle = (selected: boolean) => ({
+    padding: '5px 12px',
+    borderRadius: 6,
+    border: `1.5px solid ${selected ? '#6366f1' : 'rgba(255,255,255,0.1)'}`,
+    background: selected ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.04)',
+    color: selected ? '#a5b4fc' : '#64748b',
+    fontSize: 12,
+    fontWeight: selected ? 600 : 400,
+    cursor: 'pointer',
+    transition: 'all 0.15s',
+    whiteSpace: 'nowrap' as const,
+  });
+
+  const labelStyle: React.CSSProperties = {
+    color: '#475569',
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+    marginRight: 4,
+  };
+
+  const groupStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Size Grid */}
-      <div>
-        <label style={{ display: 'block', color: '#94a3b8', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
-          {t('params.size')}
-        </label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-          {SIZES.map((s) => {
-            const isSelected = s.width === width && s.height === height;
-            return (
-              <button
-                key={s.label}
-                onClick={() => { onWidthChange(s.width); onHeightChange(s.height); }}
-                style={{
-                  padding: '10px 4px', borderRadius: 8, textAlign: 'center',
-                  border: `2px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
-                  background: isSelected ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
-                  color: isSelected ? '#a5b4fc' : '#64748b', fontSize: 13,
-                  cursor: 'pointer', transition: 'all 0.2s',
-                }}
-              >
-                {s.label}
-              </button>
-            );
-          })}
-        </div>
+    <div style={{
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: 12,
+      padding: '10px 14px',
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.06)',
+      borderRadius: 10,
+    }}>
+      {/* Size */}
+      <div style={groupStyle}>
+        <span style={labelStyle}>{t('params.size')}</span>
+        {SIZES.map((s) => {
+          const selected = s.width === width && s.height === height;
+          return (
+            <button key={s.label} onClick={() => { onWidthChange(s.width); onHeightChange(s.height); }} style={btnStyle(selected)}>
+              {s.label}
+            </button>
+          );
+        })}
       </div>
+
+      <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)' }} />
 
       {/* Quality */}
-      <div>
-        <label style={{ display: 'block', color: '#94a3b8', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
-          {t('params.quality')}
-        </label>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {QUALITY_OPTIONS.map((q) => {
-            const isSelected = q.value === steps;
-            return (
-              <button
-                key={q.value}
-                onClick={() => onStepsChange(q.value)}
-                style={{
-                  flex: 1, padding: '10px 8px', borderRadius: 8, textAlign: 'center',
-                  border: `2px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
-                  background: isSelected ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
-                  color: isSelected ? '#a5b4fc' : '#64748b', fontSize: 13,
-                  cursor: 'pointer', transition: 'all 0.2s', position: 'relative',
-                }}
-              >
-                {t(q.labelKey)}
-                {q.badgeKey && (
-                  <span style={{
-                    position: 'absolute', top: -8, right: -8,
-                    background: '#f59e0b', color: '#000', fontSize: 10,
-                    padding: '2px 6px', borderRadius: 10, fontWeight: 700,
-                  }}>
-                    {t(q.badgeKey)}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      <div style={groupStyle}>
+        <span style={labelStyle}>{t('params.quality')}</span>
+        {QUALITY_OPTIONS.map((q) => {
+          const selected = q.value === steps;
+          return (
+            <button key={q.value} onClick={() => onStepsChange(q.value)} style={btnStyle(selected)}>
+              {t(q.labelKey)}
+            </button>
+          );
+        })}
       </div>
 
+      <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.08)' }} />
+
       {/* Count */}
-      <div>
-        <label style={{ display: 'block', color: '#94a3b8', fontSize: 13, marginBottom: 10, fontWeight: 600 }}>
-          {t('params.count')}
-        </label>
-        <div style={{ display: 'flex', gap: 10 }}>
-          {COUNT_OPTIONS.map((n) => {
-            const isSelected = n === imageCount;
-            return (
-              <button
-                key={n}
-                onClick={() => onImageCountChange(n)}
-                style={{
-                  flex: 1, padding: '10px 8px', borderRadius: 8, textAlign: 'center',
-                  border: `2px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)'}`,
-                  background: isSelected ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
-                  color: isSelected ? '#a5b4fc' : '#64748b', fontSize: 14,
-                  cursor: 'pointer', transition: 'all 0.2s',
-                }}
-              >
-                {n}张
-              </button>
-            );
-          })}
-        </div>
+      <div style={groupStyle}>
+        <span style={labelStyle}>{t('params.count')}</span>
+        {COUNT_OPTIONS.map((n) => {
+          const selected = n === imageCount;
+          return (
+            <button key={n} onClick={() => onImageCountChange(n)} style={btnStyle(selected)}>
+              {n}张
+            </button>
+          );
+        })}
       </div>
     </div>
   );

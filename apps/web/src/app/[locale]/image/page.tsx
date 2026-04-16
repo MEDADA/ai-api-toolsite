@@ -140,7 +140,7 @@ export default function ImagePage() {
         </div>
 
         {/* Model Selector */}
-        <section style={{ marginBottom: 28 }}>
+        <section style={{ marginBottom: 12 }}>
           <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('modelLabel')}</h2>
           <ModelSelector
             type="image"
@@ -150,7 +150,7 @@ export default function ImagePage() {
         </section>
 
         {/* Prompt */}
-        <section style={{ marginBottom: 28 }}>
+        <section style={{ marginBottom: 12 }}>
           <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('promptLabel')}</h2>
           <PromptInput
             value={prompt}
@@ -162,7 +162,7 @@ export default function ImagePage() {
 
         {/* Reference image (img2img only) */}
         {mode === 'img2img' && (
-          <section style={{ marginBottom: 28 }}>
+          <section style={{ marginBottom: 12 }}>
             <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('refImage')}</h2>
             <ReferenceImageUpload
               value={referenceUrl}
@@ -174,7 +174,7 @@ export default function ImagePage() {
         )}
 
         {/* Size / Quality / Count */}
-        <section style={{ marginBottom: 28 }}>
+        <section style={{ marginBottom: 12 }}>
           <h2 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, marginBottom: 14 }}>{t('params')}</h2>
           <ImageParams
             width={width}

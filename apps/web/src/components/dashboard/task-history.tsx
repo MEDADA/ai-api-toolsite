@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiClient } from '@/lib/api-client';
 import type { TaskDetailResponse } from '@/lib/shared-types';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 const TABS_KEY = ['all', 'image', 'video', 'audio'] as const;
 type Tab = typeof TABS_KEY[number];
@@ -38,6 +38,8 @@ const TAB_ICONS: Record<string, string> = {
 export function TaskHistory() {
   const t = useTranslations();
   const th = useTranslations('taskHistory');
+  const locale = useLocale();
+  const L = (path: string) => `/${locale}${path}`;
   const [tab, setTab] = useState<Tab>('all');
   const [tasks, setTasks] = useState<TaskDetailResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,7 +95,7 @@ export function TaskHistory() {
         <div style={{ textAlign: 'center', padding: 48, color: '#64748b' }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
           <p style={{ marginBottom: 16 }}>还没有创作记录</p>
-          <Link href="/image" style={{ color: '#6366f1', textDecoration: 'none', fontSize: 14 }}>
+          <Link href={L("/image")} style={{ color: '#6366f1', textDecoration: 'none', fontSize: 14 }}>
             去生成第一张图片 →
           </Link>
         </div>

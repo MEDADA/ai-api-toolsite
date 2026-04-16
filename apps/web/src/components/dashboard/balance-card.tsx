@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface BalanceCardProps {
   onRecharge: () => void;
@@ -11,6 +11,8 @@ interface BalanceCardProps {
 export function BalanceCard({ onRecharge }: BalanceCardProps) {
   const { balance } = useAuth();
   const t = useTranslations('dashboard');
+  const locale = useLocale();
+  const L = (path: string) => `/${locale}${path}`;
   const available = balance ? balance.available / 100 : 0;
   const frozen = balance ? balance.frozen / 100 : 0;
   const totalSpent = balance ? balance.total_spent / 100 : 0;
@@ -58,7 +60,7 @@ export function BalanceCard({ onRecharge }: BalanceCardProps) {
             💰 {t('recharge')}
           </button>
           <a
-            href="/image"
+            href={L("/image")}
             style={{
               padding: '12px 20px', borderRadius: 10,
               background: 'rgba(255,255,255,0.1)', color: '#fff',

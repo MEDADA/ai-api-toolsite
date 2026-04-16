@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/contexts/auth-context';
 import { LoginModal } from './login-modal';
 import { LanguageSwitcher } from './language-switcher';
@@ -11,6 +11,8 @@ export function SiteHeader() {
   const { isLoggedIn, user, balance, logout } = useAuth();
   const t = useTranslations('nav');
   const tDashboard = useTranslations('dashboard');
+  const locale = useLocale();
+  const L = (path: string) => `/${locale}${path}`;
   const [showLogin, setShowLogin] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -48,9 +50,9 @@ export function SiteHeader() {
           {/* Nav */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {[
-              { href: '/image', label: t('image') },
-              { href: '/video', label: t('video') },
-              { href: '/audio', label: t('audio') },
+              { href: L('/image'), label: t('image') },
+              { href: L('/video'), label: t('video') },
+              { href: L('/audio'), label: t('audio') },
             ].map((item) => (
               <Link
                 key={item.href}
@@ -118,7 +120,7 @@ export function SiteHeader() {
                       }}
                     >
                       {[
-                        { href: '/dashboard', label: `📊 ${tDashboard('tab.history')}` },
+                        { href: L('/dashboard'), label: `📊 ${tDashboard('tab.history')}` },
                         { href: '/dashboard?tab=balance', label: '💰 ' + tDashboard('tab.balance') },
                         { href: '/dashboard?tab=favorites', label: '⭐ ' + tDashboard('tab.favorites') },
                       ].map((item) => (

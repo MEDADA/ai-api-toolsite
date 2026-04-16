@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/api-client';
 import { LoginModal } from '@/components/login-modal';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 type Tab = 'history' | 'balance' | 'favorites';
 
@@ -20,6 +20,8 @@ export default function DashboardPage() {
   const { success } = useToast();
   const t = useTranslations('dashboard');
   const tToast = useTranslations('toast');
+  const locale = useLocale();
+  const L = (path: string) => `/${locale}${path}`;
   const [tab, setTab] = useState<Tab>('history');
   const [showRecharge, setShowRecharge] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -114,7 +116,7 @@ export default function DashboardPage() {
                 <div style={{ textAlign: 'center', padding: 48, color: '#64748b' }}>
                   <div style={{ fontSize: 32, marginBottom: 12 }}>⭐</div>
                   <p style={{ marginBottom: 16 }}>{t('emptyFavorites')}</p>
-                  <Link href="/image" style={{ color: '#6366f1', textDecoration: 'none', fontSize: 14 }}>
+                  <Link href={L("/image")} style={{ color: '#6366f1', textDecoration: 'none', fontSize: 14 }}>
                     {t('goCreate')}
                   </Link>
                 </div>

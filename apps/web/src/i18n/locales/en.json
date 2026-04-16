@@ -20,7 +20,17 @@
     "badge.new": "New",
     "model.type.image": "Image",
     "model.type.video": "Video",
-    "model.type.audio": "Audio"
+    "model.type.audio": "Audio",
+    "nav": {
+      "image": "Image Generation",
+      "video": "Video Generation",
+      "audio": "Audio Generation",
+      "dashboard": "Dashboard"
+    },
+    "badge": {
+      "hot": "Hot",
+      "new": "New"
+    }
   },
   "footer": {
     "copyright": "Making creation simpler"
@@ -40,10 +50,9 @@
     "resultHistory": "Generation History",
     "loginToGenerate": "Login to Generate",
     "estimate": "Estimated Cost",
-    "count": "{n}",
+    "count": "Count",
     "size": "Size",
     "quality": "Quality",
-    "count": "Count",
     "uploadRef": "Upload Reference",
     "dragOrClick": "Drag or click to upload reference image",
     "refHint": "10-60 seconds, clear voice",
@@ -202,28 +211,12 @@
     "type": "Type",
     "amount": "Amount",
     "balance": "Balance",
-    "remark": "Remark",
-    "recharge": "💰 Recharge",
-    "gift": "🎁 Gift",
-    "freeze": "🔒 Freeze",
-    "charge": "📤 Charge",
-    "refund": "↩️ Refund",
-    "membership": "👑 Membership",
-    "adjust": "✏️ Adjust"
+    "remark": "Remark"
   },
   "taskHistory": {
     "loading": "Loading...",
     "prevPage": "Prev",
     "nextPage": "Next"
-  },
-  "consumption": {
-    "loading": "Loading...",
-    "empty": "No spending records",
-    "time": "Time",
-    "type": "Type",
-    "amount": "Amount",
-    "balance": "Balance",
-    "remark": "Remark"
   },
   "recharge": {
     "title": "Recharge Balance",

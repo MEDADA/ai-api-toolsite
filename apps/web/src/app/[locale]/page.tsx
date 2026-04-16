@@ -4,11 +4,13 @@ import Link from 'next/link';
 import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { FeatureCard } from '@/components/feature-card';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 export default function HomePage() {
   const t = useTranslations('home');
   const tf = useTranslations('footer');
+  const locale = useLocale();
+  const L = (path: string) => `/${locale}${path}`;
 
   return (
     <main className={styles.main}>
@@ -26,10 +28,10 @@ export default function HomePage() {
             {t('heroSubtitleExtra')}
           </p>
           <div className={styles.heroCta}>
-            <Link href="/image" className={styles.ctaPrimary}>
+            <Link href={L("/image")} className={styles.ctaPrimary}>
               {t('ctaPrimary')}
             </Link>
-            <Link href="/dashboard" className={styles.ctaSecondary}>
+            <Link href={L("/dashboard")} className={styles.ctaSecondary}>
               {t('ctaSecondary')}
             </Link>
           </div>
@@ -41,7 +43,7 @@ export default function HomePage() {
         <h2 className={styles.sectionTitle}>{t('sectionTitle.start')}</h2>
         <div className={styles.entryGrid}>
           <FeatureCard
-            href="/image"
+            href={L("/image")}
             icon="🎨"
             title={t('nav.image')}
             description="FLUX.2 / 万相 2.6 — 文生图、图生图，支持写实、动漫、插画多种风格"
@@ -49,7 +51,7 @@ export default function HomePage() {
             badge={t('badge.hot')}
           />
           <FeatureCard
-            href="/video"
+            href={L("/video")}
             icon="🎬"
             title={t('nav.video')}
             description="Seedance 2.0 / Kling 3.0 — 文字转视频，支持 3-15 秒时长，高清输出"
@@ -57,7 +59,7 @@ export default function HomePage() {
             badge={t('badge.new')}
           />
           <FeatureCard
-            href="/audio"
+            href={L("/audio")}
             icon="🎙️"
             title={t('nav.audio')}
             description="TTS 文字转语音 / ASR 语音转文字 / 声音克隆 — 10+ 音色可选"

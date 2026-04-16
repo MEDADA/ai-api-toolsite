@@ -20,7 +20,17 @@
     "badge.new": "新品",
     "model.type.image": "图片",
     "model.type.video": "视频",
-    "model.type.audio": "语音"
+    "model.type.audio": "语音",
+    "nav": {
+      "image": "图片生成",
+      "video": "视频生成",
+      "audio": "语音生成",
+      "dashboard": "用户中心"
+    },
+    "badge": {
+      "hot": "热门",
+      "new": "新品"
+    }
   },
   "footer": {
     "copyright": "让创作更简单"
@@ -40,10 +50,9 @@
     "resultHistory": "历史生成",
     "loginToGenerate": "登录后生成",
     "estimate": "预估费用",
-    "count": "{n}张",
+    "count": "生成张数",
     "size": "尺寸",
     "quality": "质量档位",
-    "count": "生成张数",
     "uploadRef": "上传参考图",
     "dragOrClick": "拖拽或点击上传参考图",
     "refHint": "时长 10-60 秒，清晰人声",
@@ -202,28 +211,12 @@
     "type": "类型",
     "amount": "金额",
     "balance": "余额",
-    "remark": "备注",
-    "recharge": "💰 充值",
-    "gift": "🎁 赠送",
-    "freeze": "🔒 冻结",
-    "charge": "📤 扣费",
-    "refund": "↩️ 退款",
-    "membership": "👑 会员",
-    "adjust": "✏️ 调整"
+    "remark": "备注"
   },
   "taskHistory": {
     "loading": "加载中...",
     "prevPage": "上一页",
     "nextPage": "下一页"
-  },
-  "consumption": {
-    "loading": "加载中...",
-    "empty": "暂无消费记录",
-    "time": "时间",
-    "type": "类型",
-    "amount": "金额",
-    "balance": "余额",
-    "remark": "备注"
   },
   "recharge": {
     "title": "充值余额",
