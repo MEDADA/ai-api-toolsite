@@ -1,7 +1,7 @@
 'use client';
 import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
-import { useTranslations, useLocale } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { useState, useCallback, useRef } from 'react';
 
 const MODELS = [
@@ -10,7 +10,7 @@ const MODELS = [
 ];
 const DURATIONS = ['5秒', '10秒', '15秒'];
 const RESOLUTIONS = ['720p', '1080p'];
-const CAMERAS = ['固定镜头', '环绕', '推进', '平移'];
+const CAMERAS = ['固定', '环绕', '推进', '平移'];
 
 interface HistoryItem {
   id: string; model: string; prompt: string; time: string;
@@ -19,29 +19,49 @@ interface HistoryItem {
 
 export default function VideoPage() {
   const locale = useLocale();
+  const [mode, setMode] = useState<'text2vid' | 'img2vid'>('text2vid');
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [duration, setDuration] = useState(0);
   const [resolution, setResolution] = useState(0);
   const [camera, setCamera] = useState(0);
   const [prompt, setPrompt] = useState('');
+  const [initImage, setInitImage] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = useCallback(async (file: File) => {
+    setUploading(true);
+    try {
+      // Upload to our OSS endpoint (or use local data URL as fallback)
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setInitImage(dataUrl);
+        setUploading(false);
+      };
+      reader.onerror = () => setUploading(false);
+      reader.readAsDataURL(file);
+    } catch {
+      setUploading(false);
+    }
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  }, [handleImageUpload]);
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim() || isGenerating) return;
 
-    // Get token from localStorage
     const token = localStorage.getItem('access_token');
-    if (!token) {
-      alert('请先登录');
-      return;
-    }
+    if (!token) { alert('请先登录'); return; }
 
     const tempId = `temp_${Date.now()}`;
     const durationSec = [5, 10, 15][duration];
 
-    // Add generating card
     const genCard: HistoryItem = {
       id: tempId, model: selectedModel!.name, prompt,
       time: '生成中…', img: '', status: 'generating',
@@ -50,16 +70,20 @@ export default function VideoPage() {
     setIsGenerating(true);
 
     try {
-      // 1. Create task
+      const body: Record<string, unknown> = {
+        model_slug: 'doubao-seedance-1.5-pro',
+        prompt,
+        duration: durationSec,
+        resolution: RESOLUTIONS[resolution],
+      };
+      if (mode === 'img2vid' && initImage) {
+        body.init_image = initImage;
+      }
+
       const res = await fetch('http://localhost:3002/api/v1/tasks/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          model_slug: 'doubao-seedance-1.5-pro',
-          prompt,
-          duration: durationSec,
-          resolution: RESOLUTIONS[resolution],
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.message || '创建任务失败');
@@ -67,9 +91,7 @@ export default function VideoPage() {
       const { task_id, stream_url } = json.data;
       const actualStreamUrl = `http://localhost:3002${stream_url}`;
 
-      // 2. Listen SSE
       const es = new EventSource(actualStreamUrl);
-      eventSourceRef.current = es;
 
       es.addEventListener('task_processing', () => {
         setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '处理中…' } : h));
@@ -93,17 +115,14 @@ export default function VideoPage() {
         es.close();
       });
 
-      es.onerror = () => {
-        es.close();
-        setIsGenerating(false);
-      };
+      es.onerror = () => { es.close(); setIsGenerating(false); };
 
     } catch (err: any) {
       setHistory(prev => prev.filter(h => h.id !== tempId));
       setIsGenerating(false);
       alert(err.message);
     }
-  }, [prompt, isGenerating, selectedModel, duration, resolution, DURATIONS, RESOLUTIONS]);
+  }, [prompt, isGenerating, selectedModel, duration, resolution, initImage, mode, RESOLUTIONS]);
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -112,12 +131,49 @@ export default function VideoPage() {
 
         {/* Left */}
         <aside className={styles.leftPanel}>
+          {/* Mode toggle */}
+          <div className={styles.modeToggle}>
+            {(['text2vid', 'img2vid'] as const).map(m => (
+              <button key={m} className={`${styles.modeBtn} ${mode === m ? styles.modeBtnActive : ''}`}
+                onClick={() => setMode(m)}>
+                {m === 'text2vid' ? '✍️ 文生视频' : '🖼️ 图生视频'}
+              </button>
+            ))}
+          </div>
+
+          {/* Image upload for img2vid */}
+          {mode === 'img2vid' && (
+            <div className={styles.imageUpload} onClick={() => fileInputRef.current?.click()}>
+              {uploading ? (
+                <span className={styles.uploadSpinner} />
+              ) : initImage ? (
+                <div className={styles.imagePreview}>
+                  <img src={initImage} alt="参考图" className={styles.previewImg} />
+                  <div className={styles.previewOverlay}>
+                    <span>点击更换</span>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.uploadPlaceholder}>
+                  <span className={styles.uploadIcon}>📷</span>
+                  <span className={styles.uploadText}>上传参考图片</span>
+                  <span className={styles.uploadHint}>支持 JPG/PNG，建议 16:9</span>
+                </div>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" className={styles.hiddenInput}
+                onChange={handleFileChange} />
+              {initImage && (
+                <button className={styles.clearImage} onClick={e => { e.stopPropagation(); setInitImage(''); }}>✕</button>
+              )}
+            </div>
+          )}
+
           <div className={styles.topBar}>
             <div className={styles.modelPill} onClick={() => setSelectedModel(selectedModel!.id === 'seedance' ? MODELS[1] : MODELS[0])}>
               <span className={styles.modelPillIcon}>{selectedModel!.icon}</span>
               <span className={styles.modelPillName}>{selectedModel!.name}</span>
             </div>
-            {['时长', '分辨率'].map((label, i) => (
+            {['时长', '分辨率'].map((label) => (
               <div key={label} style={{ display: 'flex', gap: 4 }}>
                 {label === '时长' && DURATIONS.map((d, di) => (
                   <button key={d} className={`${styles.chip} ${di === duration ? styles.chipActive : ''}`} onClick={() => setDuration(di)}>
@@ -141,17 +197,20 @@ export default function VideoPage() {
           <div className={styles.coreUnit}>
             <div className={styles.promptBox}>
               <textarea className={styles.promptTextarea}
-                placeholder="描述你想要的视频场景… 例如：无人机穿越峡谷，极速飞行体验"
+                placeholder={mode === 'img2vid' ? '描述你想要的视频运动效果… 例如：镜头向前推进，场景缓慢变化' : '描述你想要的视频场景… 例如：无人机穿越峡谷，极速飞行体验'}
                 value={prompt} onChange={e => setPrompt(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleGenerate(); }}
               />
               <div className={styles.promptFooter}><span /><span className={styles.charCount}>{prompt.length} / 1000</span></div>
             </div>
-            <button className={styles.generateBtn} onClick={handleGenerate} disabled={isGenerating || !prompt.trim()}>
-              {isGenerating ? <><span className={styles.spinner} /> 生成中（等待视频…）</> : '🎬 开始生成'}
+            <button className={styles.generateBtn} onClick={handleGenerate}
+              disabled={isGenerating || !prompt.trim() || (mode === 'img2vid' && !initImage)}>
+              {isGenerating ? <><span className={styles.spinner} /> 生成中…</> : mode === 'img2vid' ? '🎬 图生视频' : '🎬 开始生成'}
             </button>
           </div>
-          <p className={styles.balanceHint}>余额 <strong>¥4.84</strong> · 预估 ¥{[5,10,15][duration]! * 1.5}</p>
+          <p className={styles.balanceHint}>
+            {mode === 'img2vid' ? '💡 图生视频效果更可控' : '余额 <strong>¥4.84</strong> · 预估 ¥'}{[5,10,15][duration]! * 1.5}
+          </p>
         </aside>
 
         {/* Right */}
@@ -166,13 +225,9 @@ export default function VideoPage() {
             {history.map(item => (
               item.status === 'generating' ? (
                 <div key={item.id} className={`${styles.historyCard} ${styles.generatingCard}`}>
-                  <div className={styles.genHeader}>
-                    <span className={styles.genLabel}>🎬 生成中</span>
-                  </div>
+                  <div className={styles.genHeader}><span className={styles.genLabel}>🎬 生成中</span></div>
                   <div className={styles.genPrompt}>{item.prompt}</div>
-                  <div className={styles.genProgressTrack}>
-                    <div className={styles.genProgressBar} style={{ width: '60%' }} />
-                  </div>
+                  <div className={styles.genProgressTrack}><div className={styles.genProgressBar} style={{ width: '60%' }} /></div>
                 </div>
               ) : (
                 <div key={item.id} className={styles.historyCard} onClick={() => window.open(item.img, '_blank')}>

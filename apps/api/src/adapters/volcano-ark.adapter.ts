@@ -47,18 +47,19 @@ async function arkFetch(path: string, options: RequestInit = {}): Promise<any> {
   return data
 }
 
-async function createArkTask(prompt: string, duration = 5): Promise<string> {
+async function createArkTask(prompt: string, duration = 5, initImageUrl?: string): Promise<string> {
+  const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = []
+  if (initImageUrl) {
+    content.push({ type: 'image_url', image_url: { url: initImageUrl } })
+  }
+  content.push({
+    type: 'text',
+    text: `${prompt} --duration ${duration} --camerafixed false --watermark true`,
+  })
+
   const result = await arkFetch('/api/v3/contents/generations/tasks', {
     method: 'POST',
-    body: JSON.stringify({
-      model: MODEL,
-      content: [
-        {
-          type: 'text',
-          text: `${prompt} --duration ${duration} --camerafixed false --watermark true`,
-        },
-      ],
-    }),
+    body: JSON.stringify({ model: MODEL, content }),
   })
   return result.id as string
 }
@@ -91,9 +92,10 @@ export class VolcanoArkAdapter {
     const p = params as Record<string, unknown>
     const prompt = String(p.prompt)
     const duration = Number(p.duration) || 5
+    const initImageUrl = p.init_image as string | undefined
 
     // 1. 创建任务
-    const taskId = await createArkTask(prompt, duration)
+    const taskId = await createArkTask(prompt, duration, initImageUrl)
 
     // 2. 轮询直到完成（最多 2 分钟）
     const task = await pollArkTask(taskId)
