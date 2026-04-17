@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import bcrypt from 'bcryptjs';
 import { prisma } from '@ai-toolsite/db';
 import { env } from '../config/env.js';
 import { generateId } from '../lib/id.js';
@@ -225,6 +226,120 @@ export const authService = {
       user: {
         id: user.id,
         phone: maskPhone(testPhone),
+        level: user.level,
+        gift_credit: user.gift_credit,
+      },
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: 7200,
+    };
+  },
+
+  /**
+   * Register a new user with phone + password (password set after code verification).
+   */
+  async registerByPhone(
+    phone: string,
+    password: string,
+    code: string
+  ): Promise<ServiceResult & { user_id: string }> {
+    // 1. Verify code
+    const verified = await this.verifyCode(phone, code);
+    if (!verified) {
+      return { ok: false, reason: 'INVALID_CODE', message: '验证码错误或已过期' };
+    }
+
+    // 2. Check if phone already registered
+    const existing = await prisma.user.findUnique({ where: { phone } });
+    if (existing) {
+      return { ok: false, reason: 'PHONE_REGISTERED', message: '该手机号已注册，请直接登录' };
+    }
+
+    // 3. Hash password and create user
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: {
+        phone,
+        phone_password_hash: passwordHash,
+        nickname: `用户${phone.slice(-4)}`,
+        level: 'NORMAL',
+        gift_credit: false,
+        wallet: {
+          create: {
+            available_balance: 0,
+            frozen_balance: 0,
+            total_recharged: 0,
+            total_spent: 0,
+          },
+        },
+      },
+      include: { wallet: true },
+    });
+
+    // 4. Issue gift credit (5元 = 500分)
+    if (user.wallet) {
+      await prisma.walletAccount.update({
+        where: { user_id: user.id },
+        data: {
+          available_balance: { increment: GIFT_CREDIT_AMOUNT },
+          total_recharged: { increment: GIFT_CREDIT_AMOUNT },
+        },
+      });
+      await prisma.walletLedger.create({
+        data: {
+          wallet_id: user.wallet.id,
+          user_id: user.id,
+          tx_type: 'GIFT_CREDIT',
+          amount: GIFT_CREDIT_AMOUNT,
+          balance_before: 0,
+          balance_after: GIFT_CREDIT_AMOUNT,
+          remark: '注册赠送5元体验金',
+        },
+      });
+      await prisma.user.update({ where: { id: user.id }, data: { gift_credit: true } });
+    }
+
+    return { ok: true, user_id: user.id };
+  },
+
+  /**
+   * Login with phone + password.
+   */
+  async loginByPassword(
+    phone: string,
+    password: string
+  ): Promise<ServiceResult & {
+    user?: Record<string, unknown>;
+    access_token?: string;
+    refresh_token?: { token: string; jti: string };
+    expires_in?: number;
+  }> {
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (!user) {
+      return { ok: false, reason: 'PHONE_NOT_FOUND', message: '该手机号未注册，请先注册' };
+    }
+
+    if (!user.phone_password_hash) {
+      return { ok: false, reason: 'NO_PASSWORD_SET', message: '该账号未设置密码，请使用验证码登录' };
+    }
+
+    const valid = await bcrypt.compare(password, user.phone_password_hash);
+    if (!valid) {
+      return { ok: false, reason: 'INVALID_PASSWORD', message: '密码错误' };
+    }
+
+    // Update last login
+    await prisma.user.update({ where: { id: user.id }, data: { updated_at: new Date() } });
+
+    // Generate tokens
+    const accessToken = await signAccessToken(user.id, user.level);
+    const refreshToken = await signRefreshToken(user.id);
+
+    return {
+      ok: true,
+      user: {
+        id: user.id,
+        phone: maskPhone(phone),
         level: user.level,
         gift_credit: user.gift_credit,
       },

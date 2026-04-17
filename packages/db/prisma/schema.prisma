@@ -127,6 +127,7 @@ enum OssObjectType {
 model User {
   id            String    @id @default(cuid())
   phone         String?   @unique
+  phone_password_hash String?
   email         String?   @unique
   nickname      String?
   avatar        String?

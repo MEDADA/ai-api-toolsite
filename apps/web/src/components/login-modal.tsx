@@ -10,22 +10,33 @@ interface LoginModalProps {
 }
 
 type Tab = 'phone' | 'email' | 'google' | 'apple';
+type PhoneMode = 'code' | 'password' | 'register';
 
 export function LoginModal({ onClose }: LoginModalProps) {
-  const { login, sendCode } = useAuth();
+  const { login, loginByPassword, registerByPhone, sendCode } = useAuth();
   const { success, error } = useToast();
   const t = useTranslations('login');
   const tToast = useTranslations('toast');
 
   const [activeTab, setActiveTab] = useState<Tab>('phone');
-  const [phoneStep, setPhoneStep] = useState<'phone' | 'code'>('phone');
+  const [phoneMode, setPhoneMode] = useState<PhoneMode>('code');
+
+  // Shared form fields
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // UI state
   const [countdown, setCountdown] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showBonus, setShowBonus] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [btnHover, setBtnHover] = useState(false);
+  const [oauthHover, setOAuthHover] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -38,6 +49,16 @@ export function LoginModal({ onClose }: LoginModalProps) {
     { key: 'apple', labelKey: 'tabApple' },
   ];
 
+  // ─── Reset form when switching phone modes ────────────────────────────────
+  const switchPhoneMode = (mode: PhoneMode) => {
+    setPhoneMode(mode);
+    setCode('');
+    setPassword('');
+    setConfirmPassword('');
+    setCountdown(0);
+  };
+
+  // ─── Send code ────────────────────────────────────────────────────────────
   const handleSendCode = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       error(tToast('invalidPhone'));
@@ -47,7 +68,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
     try {
       await sendCode(phone);
       success(tToast('codeSent'));
-      setPhoneStep('code');
       setCountdown(60);
       const timer = setInterval(() => {
         setCountdown((c) => {
@@ -63,7 +83,8 @@ export function LoginModal({ onClose }: LoginModalProps) {
     }
   };
 
-  const handleLogin = async () => {
+  // ─── Code login ──────────────────────────────────────────────────────────
+  const handleCodeLogin = async () => {
     if (code.length !== 6) {
       error(tToast('invalidCode'));
       return;
@@ -82,6 +103,76 @@ export function LoginModal({ onClose }: LoginModalProps) {
     }
   };
 
+  // ─── Password login ──────────────────────────────────────────────────────
+  const handlePasswordLogin = async () => {
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      error(tToast('invalidPhone'));
+      return;
+    }
+    if (!password) {
+      error(t('passwordPlaceholder'));
+      return;
+    }
+    setLoading(true);
+    try {
+      await loginByPassword(phone, password);
+      success(tToast('loginSuccess'));
+      setShowBonus(true);
+      setTimeout(() => { onClose(); }, 2500);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { reason?: string }; message?: string }; message?: string };
+      const reason = err.response?.data?.reason;
+      if (reason === 'PHONE_NOT_FOUND') {
+        error(t('phoneRegistered'));
+      } else if (reason === 'INVALID_PASSWORD') {
+        error(t('invalidPassword'));
+      } else {
+        error(err.response?.data?.reason || err.response?.message || err.message || tToast('loginFailed'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─── Register ─────────────────────────────────────────────────────────────
+  const handleRegister = async () => {
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      error(tToast('invalidPhone'));
+      return;
+    }
+    if (code.length !== 6) {
+      error(tToast('invalidCode'));
+      return;
+    }
+    if (password.length < 6) {
+      error(t('passwordTooShort'));
+      return;
+    }
+    if (password !== confirmPassword) {
+      error(t('confirmPasswordMismatch') || '两次密码输入不一致');
+      return;
+    }
+    setLoading(true);
+    try {
+      await registerByPhone(phone, code, password);
+      success(t('registerSuccess') + ' ' + t('bonusTitle'));
+      setShowBonus(true);
+      setTimeout(() => { onClose(); }, 2500);
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { reason?: string }; message?: string }; message?: string };
+      const reason = err.response?.data?.reason;
+      if (reason === 'PHONE_REGISTERED') {
+        error(t('phoneRegistered'));
+      } else if (reason === 'INVALID_CODE') {
+        error(tToast('invalidCode'));
+      } else {
+        error(err.response?.data?.reason || err.response?.message || err.message || tToast('loginFailed'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEmailLogin = () => {
     alert('邮箱登录功能即将上线');
   };
@@ -91,7 +182,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
   };
 
   // ─── Styles ───────────────────────────────────────────────────────────────
-
   const overlay: React.CSSProperties = {
     position: 'fixed', inset: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -175,6 +265,29 @@ export function LoginModal({ onClose }: LoginModalProps) {
         }),
   });
 
+  // Phone sub-tab bar (验证码登录 | 密码登录)
+  const phoneSubTabBar: React.CSSProperties = {
+    display: 'flex',
+    marginBottom: 24,
+    borderBottom: '1.5px solid rgba(255,255,255,0.07)',
+    paddingBottom: 0,
+    gap: 0,
+  };
+
+  const phoneSubTab = (mode: PhoneMode): React.CSSProperties => ({
+    flex: 1,
+    padding: '10px 0',
+    border: 'none',
+    background: 'transparent',
+    color: phoneMode === mode ? '#a5b4fc' : '#64748b',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    borderBottom: phoneMode === mode ? '2px solid #6366f1' : '2px solid transparent',
+    transition: 'all 0.2s',
+    marginBottom: -1.5,
+  });
+
   const sectionTitle: React.CSSProperties = {
     color: '#f1f5f9',
     marginBottom: 6,
@@ -223,6 +336,33 @@ export function LoginModal({ onClose }: LoginModalProps) {
       : 'none',
   });
 
+  // Password input with eye toggle
+  const passwordInputWrap: React.CSSProperties = {
+    position: 'relative',
+  };
+
+  const passwordInputStyle = (name: string): React.CSSProperties => ({
+    ...inputStyle(name),
+    paddingRight: 44,
+  });
+
+  const eyeBtn: React.CSSProperties = {
+    position: 'absolute',
+    right: 12,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: '#64748b',
+    fontSize: 16,
+    padding: 4,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'color 0.2s',
+  };
+
   const codeInput: React.CSSProperties = {
     ...inputStyle('code'),
     fontSize: 26,
@@ -250,11 +390,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
     marginTop: 4,
   };
 
-  const primaryBtnHover: React.CSSProperties = {
-    transform: 'translateY(-1px)',
-    boxShadow: '0 6px 28px rgba(99,102,241,0.5)',
-  };
-
   const ghostBtn: React.CSSProperties = {
     width: '100%',
     padding: '12px',
@@ -277,9 +412,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
     border: provider === 'google'
       ? '1.5px solid rgba(255,255,255,0.12)'
       : '1.5px solid rgba(255,255,255,0.1)',
-    background: provider === 'apple'
-      ? 'rgba(255,255,255,0.04)'
-      : 'rgba(255,255,255,0.04)',
+    background: 'rgba(255,255,255,0.04)',
     color: '#e2e8f0',
     fontSize: 14.5,
     fontWeight: 600,
@@ -322,91 +455,304 @@ export function LoginModal({ onClose }: LoginModalProps) {
     textDecorationColor: 'rgba(99,102,241,0.4)',
   };
 
-  const backBtn: React.CSSProperties = {
-    background: 'none', border: 'none',
-    color: '#64748b', cursor: 'pointer',
-    fontSize: 13, fontWeight: 500,
-    marginBottom: 12,
-    display: 'flex', alignItems: 'center', gap: 4,
-    padding: '4px 0',
-    transition: 'color 0.15s',
+  const switchLink: React.CSSProperties = {
+    display: 'block',
+    textAlign: 'center',
+    marginTop: 16,
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: 500,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'color 0.2s',
   };
 
-  const [btnHover, setBtnHover] = useState(false);
-  const [oauthHover, setOAuthHover] = useState(false);
+  // ─── Renderers ─────────────────────────────────────────────────────────────
 
-  const renderPhoneLogin = () => (
+  const renderPhoneCodeLogin = () => (
     <>
-      <h2 style={sectionTitle}>{phoneStep === 'phone' ? t('titlePhone') : t('titleCode')}</h2>
-      <p style={sectionSub}>
-        {phoneStep === 'phone'
-          ? t('promoText')
-          : `${t('codeSentTo')} ${phone} `}
-        {phoneStep === 'code' && (
-          <button style={editLink} onClick={() => setPhoneStep('phone')}>
-            {t('reenter')}
-          </button>
-        )}
-      </p>
+      {/* Sub-tab: 验证码登录 | 密码登录 */}
+      <div style={phoneSubTabBar}>
+        <button style={phoneSubTab('code')} onClick={() => switchPhoneMode('code')}>
+          {t('tabPhoneCode')}
+        </button>
+        <button style={phoneSubTab('password')} onClick={() => switchPhoneMode('password')}>
+          {t('tabPhonePwd')}
+        </button>
+      </div>
 
-      {phoneStep === 'phone' ? (
-        <>
-          <div style={fieldWrap('phone')}>
-            <label style={label}>{t('labelPhone')}</label>
-            <input
-              type="tel"
-              placeholder={t('phonePlaceholder')}
-              value={phone}
-              onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
-              onFocus={() => setFocusedField('phone')}
-              onBlur={() => setFocusedField(null)}
-              maxLength={11}
-              style={inputStyle('phone')}
-            />
-          </div>
-          <button
-            style={primaryBtn}
-            onMouseEnter={() => setBtnHover(true)}
-            onMouseLeave={() => setBtnHover(false)}
-            disabled={loading}
-            onClick={handleSendCode}
-          >
-            {loading ? t('sending') : t('sendCode')}
-          </button>
-        </>
-      ) : (
-        <>
-          <div style={fieldWrap('code')}>
-            <label style={label}>验证码</label>
-            <input
-              type="text"
-              placeholder={t('codePlaceholder')}
-              value={code}
-              onChange={(e) => setCode((e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6))}
-              onFocus={() => setFocusedField('code')}
-              onBlur={() => setFocusedField(null)}
-              maxLength={6}
-              style={codeInput}
-            />
-          </div>
-          <button
-            style={primaryBtn}
-            onMouseEnter={() => setBtnHover(true)}
-            onMouseLeave={() => setBtnHover(false)}
-            disabled={loading}
-            onClick={handleLogin}
-          >
-            {loading ? t('loggingIn') : t('confirmLogin')}
-          </button>
-          <button style={ghostBtn} disabled={countdown > 0} onClick={handleSendCode}>
-            {countdown > 0
-              ? t('resendAfter', { seconds: countdown.toString() })
-              : t('resendCode')}
-          </button>
-        </>
-      )}
+      <h2 style={sectionTitle}>{t('titlePhone')}</h2>
+      <p style={sectionSub}>{t('promoText')}</p>
+
+      <div style={fieldWrap('phone')}>
+        <label style={label}>{t('labelPhone')}</label>
+        <input
+          type="tel"
+          placeholder={t('phonePlaceholder')}
+          value={phone}
+          onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
+          onFocus={() => setFocusedField('phone')}
+          onBlur={() => setFocusedField(null)}
+          maxLength={11}
+          style={inputStyle('phone')}
+        />
+      </div>
+      <div style={fieldWrap('code')}>
+        <label style={label}>验证码</label>
+        <input
+          type="text"
+          placeholder={t('codePlaceholder')}
+          value={code}
+          onChange={(e) => setCode((e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6))}
+          onFocus={() => setFocusedField('code')}
+          onBlur={() => setFocusedField(null)}
+          maxLength={6}
+          style={codeInput}
+        />
+      </div>
+      <button
+        style={ghostBtn}
+        disabled={countdown > 0}
+        onClick={handleSendCode}
+      >
+        {countdown > 0
+          ? t('resendAfter', { seconds: countdown.toString() })
+          : t('resendCode')}
+      </button>
+      <button
+        style={primaryBtn}
+        onMouseEnter={() => setBtnHover(true)}
+        onMouseLeave={() => setBtnHover(false)}
+        disabled={loading}
+        onClick={handleCodeLogin}
+      >
+        {loading ? t('loggingIn') : t('confirmLogin')}
+      </button>
+
+      {/* Register link */}
+      <button
+        style={switchLink}
+        onClick={() => switchPhoneMode('register')}
+      >
+        {t('goRegister')}
+      </button>
     </>
   );
+
+  const renderPhonePasswordLogin = () => (
+    <>
+      {/* Sub-tab */}
+      <div style={phoneSubTabBar}>
+        <button style={phoneSubTab('code')} onClick={() => switchPhoneMode('code')}>
+          {t('tabPhoneCode')}
+        </button>
+        <button style={phoneSubTab('password')} onClick={() => switchPhoneMode('password')}>
+          {t('tabPhonePwd')}
+        </button>
+      </div>
+
+      <h2 style={sectionTitle}>{t('passwordLogin')}</h2>
+      <p style={sectionSub}>{t('passwordLoginSubtitle') || '使用密码登录您的账号'}</p>
+
+      <div style={fieldWrap('phone')}>
+        <label style={label}>{t('labelPhone')}</label>
+        <input
+          type="tel"
+          placeholder={t('phonePlaceholder')}
+          value={phone}
+          onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
+          onFocus={() => setFocusedField('phone')}
+          onBlur={() => setFocusedField(null)}
+          maxLength={11}
+          style={inputStyle('phone')}
+        />
+      </div>
+
+      <div style={fieldWrap('password')}>
+        <label style={label}>{t('labelPassword')}</label>
+        <div style={passwordInputWrap}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder={t('passwordPlaceholder')}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => setFocusedField(null)}
+            style={passwordInputStyle('password')}
+          />
+          <button
+            style={eyeBtn}
+            onClick={() => setShowPassword(v => !v)}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#94a3b8')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#64748b')}
+            aria-label={showPassword ? '隐藏密码' : '显示密码'}
+            type="button"
+          >
+            {showPassword ? '👁' : '👁‍🗨'}
+          </button>
+        </div>
+      </div>
+
+      <button
+        style={primaryBtn}
+        onMouseEnter={() => setBtnHover(true)}
+        onMouseLeave={() => setBtnHover(false)}
+        disabled={loading}
+        onClick={handlePasswordLogin}
+      >
+        {loading ? t('loggingIn') : t('loginBtn')}
+      </button>
+
+      {/* Register link */}
+      <button
+        style={switchLink}
+        onClick={() => switchPhoneMode('register')}
+      >
+        {t('goRegister')}
+      </button>
+    </>
+  );
+
+  const renderPhoneRegister = () => (
+    <>
+      {/* Sub-tab: 验证码登录 | 密码登录 */}
+      <div style={phoneSubTabBar}>
+        <button style={phoneSubTab('code')} onClick={() => switchPhoneMode('code')}>
+          {t('tabPhoneCode')}
+        </button>
+        <button style={phoneSubTab('password')} onClick={() => switchPhoneMode('password')}>
+          {t('tabPhonePwd')}
+        </button>
+      </div>
+
+      <h2 style={sectionTitle}>{t('registerTitle')}</h2>
+      <p style={sectionSub}>{t('registerSubtitle') || '设置密码保护您的账号安全'}</p>
+
+      <div style={fieldWrap('phone')}>
+        <label style={label}>{t('labelPhone')}</label>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="tel"
+            placeholder={t('phonePlaceholder')}
+            value={phone}
+            onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
+            onFocus={() => setFocusedField('phone')}
+            onBlur={() => setFocusedField(null)}
+            maxLength={11}
+            style={{ ...inputStyle('phone'), flex: 1 }}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+        <input
+          type="text"
+          placeholder={t('codePlaceholder')}
+          value={code}
+          onChange={(e) => setCode((e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6))}
+          onFocus={() => setFocusedField('code')}
+          onBlur={() => setFocusedField(null)}
+          maxLength={6}
+          style={{ ...inputStyle('code'), fontSize: 15, letterSpacing: 4, padding: '12px 14px', flex: 1 }}
+        />
+        <button
+          style={{
+            padding: '12px 14px',
+            borderRadius: 10,
+            border: '1.5px solid rgba(99,102,241,0.4)',
+            background: 'rgba(99,102,241,0.1)',
+            color: countdown > 0 ? '#64748b' : '#a5b4fc',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: countdown > 0 ? 'default' : 'pointer',
+            opacity: countdown > 0 ? 0.5 : 1,
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s',
+          }}
+          disabled={countdown > 0 || loading}
+          onClick={handleSendCode}
+        >
+          {countdown > 0 ? `${countdown}s` : t('sendCode')}
+        </button>
+      </div>
+
+      <div style={fieldWrap('password')}>
+        <label style={label}>{t('setPasswordLabel') || '设置密码'}</label>
+        <div style={passwordInputWrap}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder={t('passwordPlaceholder')}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => setFocusedField(null)}
+            style={passwordInputStyle('password')}
+          />
+          <button
+            style={eyeBtn}
+            onClick={() => setShowPassword(v => !v)}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#94a3b8')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#64748b')}
+            aria-label={showPassword ? '隐藏密码' : '显示密码'}
+            type="button"
+          >
+            {showPassword ? '👁' : '👁‍🗨'}
+          </button>
+        </div>
+      </div>
+
+      <div style={fieldWrap('confirmPassword')}>
+        <label style={label}>{t('confirmPasswordLabel') || '确认密码'}</label>
+        <div style={passwordInputWrap}>
+          <input
+            type={showConfirmPassword ? 'text' : 'password'}
+            placeholder={t('confirmPasswordPlaceholder') || '请再次输入密码'}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            onFocus={() => setFocusedField('confirmPassword')}
+            onBlur={() => setFocusedField(null)}
+            style={passwordInputStyle('confirmPassword')}
+          />
+          <button
+            style={eyeBtn}
+            onClick={() => setShowConfirmPassword(v => !v)}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#94a3b8')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#64748b')}
+            aria-label={showConfirmPassword ? '隐藏密码' : '显示密码'}
+            type="button"
+          >
+            {showConfirmPassword ? '👁' : '👁‍🗨'}
+          </button>
+        </div>
+      </div>
+
+      <button
+        style={primaryBtn}
+        onMouseEnter={() => setBtnHover(true)}
+        onMouseLeave={() => setBtnHover(false)}
+        disabled={loading}
+        onClick={handleRegister}
+      >
+        {loading ? t('loggingIn') : t('registerBtn')}
+      </button>
+
+      {/* Back to login */}
+      <button
+        style={switchLink}
+        onClick={() => switchPhoneMode('password')}
+      >
+        {t('goLogin')}
+      </button>
+    </>
+  );
+
+  const renderPhoneContent = () => {
+    if (phoneMode === 'code') return renderPhoneCodeLogin();
+    if (phoneMode === 'password') return renderPhonePasswordLogin();
+    if (phoneMode === 'register') return renderPhoneRegister();
+    return null;
+  };
 
   const renderEmailLogin = () => (
     <>
@@ -424,13 +770,24 @@ export function LoginModal({ onClose }: LoginModalProps) {
       </div>
       <div style={fieldWrap('password')}>
         <label style={label}>{t('labelPassword')}</label>
-        <input
-          type="password"
-          placeholder={t('passwordPlaceholder')}
-          onFocus={() => setFocusedField('password')}
-          onBlur={() => setFocusedField(null)}
-          style={inputStyle('password')}
-        />
+        <div style={passwordInputWrap}>
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder={t('passwordPlaceholder')}
+            onFocus={() => setFocusedField('password')}
+            onBlur={() => setFocusedField(null)}
+            style={passwordInputStyle('password')}
+          />
+          <button
+            style={eyeBtn}
+            onClick={() => setShowPassword(v => !v)}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#94a3b8')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#64748b')}
+            type="button"
+          >
+            {showPassword ? '👁' : '👁‍🗨'}
+          </button>
+        </div>
       </div>
       <button
         style={primaryBtn}
@@ -495,7 +852,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       </button>
       <div style={divider}>
         <div style={dividerLine} />
-        <span style={dividerText}>或</span>
+        <span style={dividerText}>{t('or')}</span>
         <div style={dividerLine} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -613,7 +970,13 @@ export function LoginModal({ onClose }: LoginModalProps) {
               <button
                 key={tb.key}
                 style={tab(tb.key)}
-                onClick={() => { setActiveTab(tb.key); setPhoneStep('phone'); setCode(''); }}
+                onClick={() => {
+                  setActiveTab(tb.key);
+                  if (tb.key === 'phone') switchPhoneMode('code');
+                  setCode('');
+                  setPassword('');
+                  setConfirmPassword('');
+                }}
               >
                 {t(tb.labelKey)}
               </button>
@@ -622,13 +985,12 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
           {/* Content */}
           <div>
-            {activeTab === 'phone' && renderPhoneLogin()}
+            {activeTab === 'phone' && renderPhoneContent()}
             {activeTab === 'email' && renderEmailLogin()}
             {activeTab === 'google' && renderGoogleLogin()}
             {activeTab === 'apple' && renderAppleLogin()}
           </div>
 
-          {/* Dev: skip verification */}
           {/* Footer hint */}
           {!showBonus && (
             <p style={{

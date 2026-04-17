@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authService } from '../services/auth.service.js';
-import { SendCodeSchema, LoginByCodeSchema, RefreshTokenSchema } from '@ai-toolsite/shared';
+import { SendCodeSchema, LoginByCodeSchema, RefreshTokenSchema, RegisterByPhoneSchema, LoginByPasswordSchema } from '@ai-toolsite/shared';
 import { success, fail } from '../lib/api-envelope.js';
 import { jwtVerify } from 'jose';
 import { env } from '../config/env.js';
@@ -35,6 +35,36 @@ export async function authRoutes(fastify: FastifyInstance) {
     const result = await authService.loginByCode(phone, code, req.requestId);
     if (!result.ok) {
       const status = result.reason === 'INVALID_CODE' ? 401 : 400;
+      return reply.code(status).send(fail(result.reason ?? 'LOGIN_FAILED', result.message ?? 'Login failed', req.requestId));
+    }
+    return reply.send(result);
+  });
+
+  // ── POST /api/v1/auth/register-by-phone ────────────────────────
+  fastify.post('/register-by-phone', async (req: FastifyRequest, reply: FastifyReply) => {
+    const parsed = RegisterByPhoneSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send(fail('VALIDATION_ERROR', parsed.error.errors[0]?.message ?? 'Invalid params', req.requestId));
+    }
+    const { phone, code, password } = parsed.data;
+    const result = await authService.registerByPhone(phone, password, code);
+    if (!result.ok) {
+      const status = result.reason === 'INVALID_CODE' ? 401 : 400;
+      return reply.code(status).send(fail(result.reason ?? 'REGISTER_FAILED', result.message ?? 'Registration failed', req.requestId));
+    }
+    return reply.send(result);
+  });
+
+  // ── POST /api/v1/auth/login-by-password ─────────────────────────
+  fastify.post('/login-by-password', async (req: FastifyRequest, reply: FastifyReply) => {
+    const parsed = LoginByPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send(fail('VALIDATION_ERROR', parsed.error.errors[0]?.message ?? 'Invalid params', req.requestId));
+    }
+    const { phone, password } = parsed.data;
+    const result = await authService.loginByPassword(phone, password);
+    if (!result.ok) {
+      const status = result.reason === 'PHONE_NOT_FOUND' || result.reason === 'INVALID_PASSWORD' ? 401 : 400;
       return reply.code(status).send(fail(result.reason ?? 'LOGIN_FAILED', result.message ?? 'Login failed', req.requestId));
     }
     return reply.send(result);

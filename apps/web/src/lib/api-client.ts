@@ -110,6 +110,18 @@ class ApiClient {
         body: JSON.stringify({ phone, code }),
       }),
 
+    registerByPhone: (phone: string, code: string, password: string): Promise<LoginResult> =>
+      this.fetch('/api/v1/auth/register-by-phone', {
+        method: 'POST',
+        body: JSON.stringify({ phone, code, password }),
+      }),
+
+    loginByPassword: (phone: string, password: string): Promise<LoginResult> =>
+      this.fetch('/api/v1/auth/login-by-password', {
+        method: 'POST',
+        body: JSON.stringify({ phone, password }),
+      }),
+
     refresh: (refreshToken: string): Promise<{ ok: boolean; access_token: string; expires_in: number; refresh_token: { token: string; jti: string } }> =>
       this.fetch('/api/v1/auth/refresh', {
         method: 'POST',

@@ -26,6 +26,8 @@ interface AuthContextValue {
   balance: WalletBalance | null;
   loading: boolean;
   login: (phone: string, code: string) => Promise<LoginResult>;
+  loginByPassword: (phone: string, password: string) => Promise<LoginResult>;
+  registerByPhone: (phone: string, code: string, password: string) => Promise<LoginResult>;
   sendCode: (phone: string) => Promise<void>;
   logout: () => void;
   refetchBalance: () => Promise<void>;
@@ -103,10 +105,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current); };
   }, [token]);
 
-  const login = useCallback(async (phone: string, code: string): Promise<LoginResult> => {
-    const result = await apiClient.auth.loginByCode(phone, code);
+  const _setSession = useCallback((result: LoginResult) => {
     const newToken = result.access_token;
-    const refreshToken = result.refresh_token.token;
+    const refreshToken = typeof result.refresh_token === 'string'
+      ? result.refresh_token
+      : (result.refresh_token as { token: string; jti: string }).token;
 
     apiClient.setAuthToken(newToken);
     setToken(newToken);
@@ -120,12 +123,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Fetch balance after login
     try {
-      const bal = await apiClient.wallet.getBalance();
-      setBalance(bal);
+      const bal = apiClient.wallet.getBalance();
+      bal.then((data) => setBalance(data)).catch(() => {/* ignore */});
     } catch { /* ignore */ }
-
-    return result;
   }, []);
+
+  const login = useCallback(async (phone: string, code: string): Promise<LoginResult> => {
+    const result = await apiClient.auth.loginByCode(phone, code);
+    _setSession(result);
+    return result;
+  }, [_setSession]);
+
+  const loginByPassword = useCallback(async (phone: string, password: string): Promise<LoginResult> => {
+    const result = await apiClient.auth.loginByPassword(phone, password);
+    _setSession(result as LoginResult);
+    return result as LoginResult;
+  }, [_setSession]);
+
+  const registerByPhone = useCallback(async (phone: string, code: string, password: string): Promise<LoginResult> => {
+    await apiClient.auth.registerByPhone(phone, code, password);
+    // After registration, auto-login via password
+    const loginResult = await apiClient.auth.loginByPassword(phone, password);
+    _setSession(loginResult);
+    return loginResult;
+  }, [_setSession]);
 
   const sendCode = useCallback(async (phone: string) => {
     await apiClient.auth.sendCode(phone);
@@ -169,6 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         balance,
         loading,
         login,
+        loginByPassword,
+        registerByPhone,
         sendCode,
         logout,
         refetchBalance,

@@ -13,6 +13,17 @@ export const LoginByCodeSchema = z.object({
   code: z.string().length(6, 'Code must be 6 digits'),
 });
 
+export const RegisterByPhoneSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/),
+  code: z.string().length(6, 'Code must be 6 digits'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+});
+
+export const LoginByPasswordSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/),
+  password: z.string().min(1, 'Password is required'),
+});
+
 export const RefreshTokenSchema = z.object({
   refresh_token: z.string().min(1),
 });
