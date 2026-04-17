@@ -19,10 +19,22 @@ async function main() {
   });
 
   // Plugins
+  const allowedOrigins = env.CORS_ORIGINS.split(',').map(s => s.trim());
   await fastify.register(cors, {
-    origin: env.CORS_ORIGINS.split(',').map(s => s.trim()),
+    origin(origin, callback) {
+      // Allow requests with no origin (e.g., mobile apps or curl)
+      if (!origin) return callback(null, true);
+      // Check if origin is allowed
+      if (allowedOrigins.includes(origin)) {
+        // Return the origin when credentials are enabled
+        callback(null, origin);
+      } else {
+        callback(new Error('Not allowed by CORS'), false);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   await fastify.register(requestContextPlugin);
