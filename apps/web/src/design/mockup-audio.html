@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>语音处理 - Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #08080f; color: #fff; height: 100vh; overflow: hidden; }
+  header { position: fixed; top: 0; left: 0; right: 0; z-index: 200; height: 56px; background: rgba(8,8,15,0.88); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; padding: 0 24px; gap: 24px; }
+  .logo { font-size: 15px; font-weight: 800; color: #e2e8f0; display: flex; align-items: center; gap: 8px; white-space: nowrap; text-decoration: none; }
+  .logo span { font-size: 20px; }
+  .header-nav { display: flex; gap: 4px; flex: 1; justify-content: center; }
+  .header-nav a { padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; }
+  .header-nav a:not(.active) { color: #475569; }
+  .header-nav a.active { color: #a5b4fc; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .lang-btn { padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; font-size: 12px; cursor: pointer; }
+  .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .layout { display: flex; height: calc(100vh - 56px); margin-top: 56px; }
+  .left-panel { width: 38.2%; min-width: 320px; max-width: 440px; height: 100%; display: flex; flex-direction: column; padding: 14px 16px; overflow-y: auto; flex-shrink: 0; }
+  .left-panel::-webkit-scrollbar { width: 4px; }
+  .left-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+  /* Mode toggle */
+  .mode-toggle { display: flex; gap: 5px; margin-bottom: 10px; }
+  .mode-btn { flex: 1; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: #475569; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .mode-btn:hover { border-color: rgba(255,255,255,0.14); color: #94a3b8; }
+  .mode-btn.active { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.1); color: #a5b4fc; }
+  /* Top bar / chips */
+  .top-bar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+  .model-pill { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; cursor: pointer; }
+  .model-pill-icon { font-size: 12px; }
+  .model-pill-name { font-size: 11px; font-weight: 600; color: #a5b4fc; }
+  .top-chip { display: flex; align-items: center; gap: 2px; padding: 5px 9px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; cursor: pointer; font-size: 11px; color: #64748b; transition: all 0.15s; }
+  .top-chip:hover { border-color: rgba(255,255,255,0.15); color: #e2e8f0; }
+  .top-chip.active { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.08); color: #a5b4fc; font-weight: 600; }
+  .top-chip .lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #374151; margin-right: 2px; }
+  .top-chip .div { color: #374151; }
+  /* Audio upload for ASR */
+  .audio-upload { width: 100%; height: 80px; border-radius: 11px; border: 1.5px dashed rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; margin-bottom: 10px; transition: all 0.2s; }
+  .audio-upload:hover { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.05); }
+  .audio-upload-icon { font-size: 22px; margin-bottom: 4px; }
+  .audio-upload-text { font-size: 12px; color: #475569; }
+  .audio-upload-hint { font-size: 10px; color: #334155; margin-top: 2px; }
+  /* Clone reference text */
+  .clone-hint { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.15); border-radius: 8px; margin-bottom: 10px; font-size: 11px; color: #818cf8; }
+  .clone-hint span:first-child { font-size: 14px; }
+  /* Core unit */
+  .core-unit { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .prompt-box { flex: 1; background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.08); border-bottom: none; border-radius: 12px 12px 0 0; overflow: hidden; display: flex; flex-direction: column; transition: border-color 0.2s; }
+  .prompt-box:focus-within { border-color: rgba(99,102,241,0.4); }
+  .prompt-textarea { flex: 1; width: 100%; background: transparent; border: none; padding: 14px 16px; color: #e2e8f0; font-size: 14px; resize: none; outline: none; font-family: inherit; line-height: 1.7; min-height: 100px; }
+  .prompt-textarea::placeholder { color: #2d3748; }
+  .prompt-footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.05); }
+  .char-count { font-size: 10px; color: #374151; }
+  .generate-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; border-radius: 0 0 12px 12px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 18px rgba(99,102,241,0.4); transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .generate-btn:hover { box-shadow: 0 6px 24px rgba(99,102,241,0.55); }
+  .balance-hint { text-align: center; font-size: 10px; color: #334155; margin-top: 6px; }
+  .balance-hint strong { color: #48bb78; font-weight: 600; }
+  /* Right panel */
+  .right-panel { flex: 1; height: 100%; overflow-y: auto; padding: 16px 20px; }
+  .right-panel::-webkit-scrollbar { width: 5px; }
+  .right-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 3px; }
+  .history-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; position: sticky; top: 0; background: #08080f; padding-bottom: 12px; z-index: 10; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .history-heading { font-size: 14px; font-weight: 700; color: #e2e8f0; }
+  .history-count { font-size: 11px; color: #374151; margin-left: 6px; }
+  .history-filter { display: flex; gap: 5px; }
+  .filter-btn { padding: 4px 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.07); background: transparent; color: #475569; font-size: 11px; cursor: pointer; }
+  .filter-btn.active { border-color: rgba(99,102,241,0.4); color: #a5b4fc; background: rgba(99,102,241,0.08); }
+  /* Audio list (vertical, not grid) */
+  .audio-list { display: flex; flex-direction: column; gap: 8px; }
+  .audio-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 11px; overflow: hidden; cursor: pointer; transition: all 0.2s; padding: 12px 14px; }
+  .audio-card:hover { border-color: rgba(99,102,241,0.3); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .generating-card { background: rgba(99,102,241,0.05); border-color: rgba(99,102,241,0.18); }
+  .gen-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .spinner { width: 12px; height: 12px; border: 1.5px solid rgba(99,102,241,0.3); border-top-color: #818cf8; border-radius: 50%; animation: spin 1s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gen-label { font-size: 10px; color: #a5b4fc; font-weight: 600; }
+  .gen-progress-track { height: 2px; background: rgba(255,255,255,0.04); margin-top: 6px; }
+  .gen-progress-bar { height: 100%; background: linear-gradient(90deg, #6366f1, #818cf8); }
+  /* Player */
+  .audio-player { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .play-btn { width: 30px; height: 30px; border-radius: 50%; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+  .play-btn:hover { background: rgba(99,102,241,0.25); box-shadow: 0 0 12px rgba(99,102,241,0.3); }
+  /* Waveform */
+  .waveform { display: flex; align-items: center; gap: 1.5px; height: 28px; flex: 1; overflow: hidden; }
+  .waveform-bar { width: 2px; border-radius: 1px; min-height: 2px; transition: height 0.1s; }
+  .audio-duration { font-size: 9px; color: #475569; flex-shrink: 0; width: 26px; text-align: right; }
+  .audio-body { margin-bottom: 8px; }
+  .audio-tag { display: inline-block; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: rgba(99,102,241,0.12); color: #818cf8; margin-bottom: 4px; }
+  .audio-text { font-size: 11px; color: #475569; line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .audio-footer { display: flex; align-items: center; justify-content: space-between; }
+  .audio-time { font-size: 9px; color: #334155; }
+  .audio-actions { display: flex; gap: 4px; }
+  .audio-act { font-size: 9px; color: #374151; padding: 2px 8px; border-radius: 3px; background: rgba(255,255,255,0.04); border: none; cursor: pointer; transition: color 0.15s; }
+  .audio-act:hover { color: #94a3b8; }
+  @media (max-width: 768px) { .layout { flex-direction: column; } .left-panel { width: 100%; height: auto; } .right-panel { height: calc(100vh - 56px); } }
+</style>
+</head>
+<body>
+<header>
+  <a href="#" class="logo"><span>🎨</span> AI Toolsite</a>
+  <nav class="header-nav">
+    <a href="#">图片生成</a>
+    <a href="#">视频生成</a>
+    <a href="#" class="active">语音生成</a>
+  </nav>
+  <div class="header-right">
+    <button class="lang-btn">🌐 中文</button>
+    <div class="user-avatar">我用</div>
+  </div>
+</header>
+<div class="layout">
+  <aside class="left-panel">
+
+    <!-- Mode toggle: TTS / ASR / 克隆 -->
+    <div class="mode-toggle">
+      <button class="mode-btn active">TTS 文字转语音</button>
+      <button class="mode-btn">ASR 语音转文字</button>
+      <button class="mode-btn">声音克隆</button>
+    </div>
+
+    <!-- Top bar: voice + language + speed chips (TTS mode) -->
+    <div class="top-bar">
+      <div class="model-pill">
+        <span class="model-pill-icon">🎙️</span>
+        <span class="model-pill-name">晓晓（女声）</span>
+      </div>
+      <div class="top-chip active">
+        <span class="lbl">音色</span><span class="div">·</span><span>晓晓</span>
+      </div>
+      <div class="top-chip">
+        <span class="lbl">音色</span><span class="div">·</span><span>云飞</span>
+      </div>
+      <div class="top-chip">
+        <span class="lbl">音色</span><span class="div">·</span><span>小宁</span>
+      </div>
+      <div class="top-chip">
+        <span class="lbl">音色</span><span class="div">·</span><span>阿波</span>
+      </div>
+      <div class="top-chip active">
+        <span class="lbl">语言</span><span class="div">·</span><span>中文</span>
+      </div>
+      <div class="top-chip">
+        <span class="lbl">语言</span><span class="div">·</span><span>英文</span>
+      </div>
+      <div class="top-chip">
+        <span class="lbl">语言</span><span class="div">·</span><span>中日</span>
+      </div>
+      <div class="top-chip active">
+        <span class="lbl">语速</span><span class="div">·</span><span>1.0x</span>
+      </div>
+      <div class="top-chip">
+        <span class="lbl">语速</span><span class="div">·</span><span>0.8x</span>
+      </div>
+      <div class="top-chip">
+        <span class="lbl">语速</span><span class="div">·</span><span>1.2x</span>
+      </div>
+    </div>
+
+    <!-- Prompt textarea -->
+    <div class="core-unit">
+      <div class="prompt-box">
+        <textarea class="prompt-textarea" placeholder="输入要转换的文字，支持多语言和长文本朗读…"></textarea>
+        <div class="prompt-footer">
+          <span></span>
+          <span class="char-count">0 / 5000</span>
+        </div>
+      </div>
+      <button class="generate-btn">🎙️ 开始生成</button>
+    </div>
+    <p class="balance-hint">余额 <strong>¥9.50</strong> · 预估 ¥0.30</p>
+  </aside>
+
+  <main class="right-panel">
+    <div class="history-topbar">
+      <div>
+        <span class="history-heading">生成历史</span>
+        <span class="history-count">5 条</span>
+      </div>
+      <div class="history-filter">
+        <button class="filter-btn active">全部</button>
+        <button class="filter-btn">TTS</button>
+        <button class="filter-btn">ASR</button>
+        <button class="filter-btn">收藏</button>
+      </div>
+    </div>
+
+    <div class="audio-list">
+
+      <!-- Generating card -->
+      <div class="audio-card generating-card">
+        <div class="gen-header"><div class="spinner"></div><span class="gen-label">TTS · 晓晓 · 生成中 40%</span></div>
+        <div class="audio-player">
+          <div class="play-btn" style="opacity:0.4">▶</div>
+          <div class="waveform" id="gen-waveform"></div>
+          <span class="audio-duration">--</span>
+        </div>
+        <div class="gen-progress-track"><div class="gen-progress-bar" style="width:40%"></div></div>
+      </div>
+
+      <!-- Audio card 1 -->
+      <div class="audio-card">
+        <div class="audio-player">
+          <button class="play-btn">▶</button>
+          <div class="waveform" id="wave1"></div>
+          <span class="audio-duration">12s</span>
+        </div>
+        <div class="audio-body">
+          <span class="audio-tag">TTS · 晓晓 · 中文 · 1.0x</span>
+          <p class="audio-text">欢迎使用 AI 语音合成服务，支持多种音色和语言切换，轻松生成自然流畅的语音内容</p>
+        </div>
+        <div class="audio-footer">
+          <span class="audio-time">刚刚</span>
+          <div class="audio-actions">
+            <button class="audio-act">⬇ 下载</button>
+            <button class="audio-act">⭐</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audio card 2 -->
+      <div class="audio-card">
+        <div class="audio-player">
+          <button class="play-btn">▶</button>
+          <div class="waveform" id="wave2"></div>
+          <span class="audio-duration">8s</span>
+        </div>
+        <div class="audio-body">
+          <span class="audio-tag">TTS · 云飞 · 英文 · 1.0x</span>
+          <p class="audio-text">The future of AI content creation is here with natural voice synthesis</p>
+        </div>
+        <div class="audio-footer">
+          <span class="audio-time">5 分钟前</span>
+          <div class="audio-actions">
+            <button class="audio-act">⬇ 下载</button>
+            <button class="audio-act">⭐</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audio card 3 -->
+      <div class="audio-card">
+        <div class="audio-player">
+          <button class="play-btn">▶</button>
+          <div class="waveform" id="wave3"></div>
+          <span class="audio-duration">15s</span>
+        </div>
+        <div class="audio-body">
+          <span class="audio-tag">声音克隆 · 阿波</span>
+          <p class="audio-text">这是一段用你声音克隆生成的语音内容，音色自然逼真</p>
+        </div>
+        <div class="audio-footer">
+          <span class="audio-time">20 分钟前</span>
+          <div class="audio-actions">
+            <button class="audio-act">⬇ 下载</button>
+            <button class="audio-act">⭐</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audio card 4 -->
+      <div class="audio-card">
+        <div class="audio-player">
+          <button class="play-btn">▶</button>
+          <div class="waveform" id="wave4"></div>
+          <span class="audio-duration">22s</span>
+        </div>
+        <div class="audio-body">
+          <span class="audio-tag">ASR · 中文转文字</span>
+          <p class="audio-text">这是语音转文字的识别结果，识别准确率达到 98%</p>
+        </div>
+        <div class="audio-footer">
+          <span class="audio-time">1 小时前</span>
+          <div class="audio-actions">
+            <button class="audio-act">⬇ 下载</button>
+            <button class="audio-act">⭐</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script>
+  // Generate waveform bars
+  function genWave(waveId, fillRatio) {
+    const container = document.getElementById(waveId);
+    if (!container) return;
+    for (let i = 0; i < 40; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'waveform-bar';
+      const h = Math.random() * 22 + 4;
+      bar.style.height = h + 'px';
+      bar.style.background = i < fillRatio * 40 ? 'rgba(52,211,153,0.65)' : 'rgba(52,211,153,0.2)';
+      container.appendChild(bar);
+    }
+  }
+  genWave('wave1', 1.0);
+  genWave('wave2', 0.72);
+  genWave('wave3', 0.5);
+  genWave('wave4', 0.9);
+  genWave('gen-waveform', 0.4);
+</script>
+</body>
+</html>
