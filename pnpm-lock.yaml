@@ -156,12 +156,18 @@ importers:
       '@ai-toolsite/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
       bullmq:
         specifier: ^5.1.0
         version: 5.74.1
       ioredis:
         specifier: ^5.3.0
         version: 5.10.1
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^20.11.0

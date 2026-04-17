@@ -2848,3 +2848,38 @@ async function recordRisk(
 ---
 
 *本文档为 TECH v0.1，基于 PRD v0.3 编写，需技术评审确认后进入实现阶段。*
+
+---
+
+## 实现差异备注（v0.1 vs 实际实现）
+
+> 以下差异在实现过程中发现并记录，供后续评审参考。
+
+### 1. API 端口变更
+- **原因**：端口 3001 被系统 Flask 开发服务器占用（Werkzeug/3.1.3 Python/3.11.9）
+- **处理**：API 服务改为监听 `PORT=3004`，前端 Web（3000）和 Admin（3002）不受影响
+- **影响**：前端调用 API 时需配置 `NEXT_PUBLIC_API_BASE_URL=http://localhost:3004`
+
+### 2. 模型列表 API 响应格式
+- **TECH 描述**：`{ ok: true, models: [...] }`
+- **实际实现**：`{ ok: true, data: [...] }`
+- **原因**：统一使用 `apiEnvelope` 标准封套（`success()` 函数），所有接口保持一致
+- **评估**：实现优于 TECH，更加规范一致，无需修改
+
+### 3. API 服务架构
+- **TECH 描述**：所有 BullMQ Worker 在 `apps/api` 包内（`/src/workers/`）
+- **实际实现**：Worker 拆分为独立 `apps/worker` 包，使用 BullMQ；`apps/api/src/workers/video.worker.ts` 为遗留文件（未使用）
+- **影响**：无，功能正常，但需注意 `apps/api/src/workers/` 目录为废弃代码
+
+### 4. 环境变量配置
+- **原因**：packages/db 使用 Prisma，Prisma Client 需要 `DATABASE_URL` 环境变量
+- **处理**：在各服务 `.env` 文件中明确配置 `DATABASE_URL`
+- **注意**：`.env.local` 为 Next.js 惯例，不被 Bun 自动加载；Bun 运行时代码需使用 `.env` 文件
+
+### 5. Admin 管理后台
+- **状态**：原 `apps/admin` 仅含 package.json，无任何源文件
+- **处理**：创建最小化 Next.js 应用骨架（layout.tsx + page.tsx + next.config.js）
+- **后续**：Admin 功能开发需另行设计
+
+### 6. JWT / SSE / BullMQ / 钱包 / 支付
+- 以上模块实现与 TECH v0.1 完全一致，无差异。
