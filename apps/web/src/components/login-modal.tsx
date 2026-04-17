@@ -12,7 +12,7 @@ interface LoginModalProps {
 type Tab = 'phone' | 'email' | 'google' | 'apple';
 
 export function LoginModal({ onClose }: LoginModalProps) {
-  const { login, sendCode, testLogin } = useAuth();
+  const { login, sendCode } = useAuth();
   const { success, error } = useToast();
   const t = useTranslations('login');
   const tToast = useTranslations('toast');
@@ -340,7 +340,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       <h2 style={sectionTitle}>{phoneStep === 'phone' ? t('titlePhone') : t('titleCode')}</h2>
       <p style={sectionSub}>
         {phoneStep === 'phone'
-          ? '首次登录赠送 ¥5 体验金，轻松体验全部功能'
+          ? t('promoText')
           : `${t('codeSentTo')} ${phone} `}
         {phoneStep === 'code' && (
           <button style={editLink} onClick={() => setPhoneStep('phone')}>
@@ -352,7 +352,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       {phoneStep === 'phone' ? (
         <>
           <div style={fieldWrap('phone')}>
-            <label style={label}>手机号</label>
+            <label style={label}>{t('labelPhone')}</label>
             <input
               type="tel"
               placeholder={t('phonePlaceholder')}
@@ -411,9 +411,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const renderEmailLogin = () => (
     <>
       <h2 style={sectionTitle}>{t('titleEmail')}</h2>
-      <p style={sectionSub}>支持 Gmail、Outlook 等主流邮箱登录</p>
+      <p style={sectionSub}>{t('emailSubtitle')}</p>
       <div style={fieldWrap('email')}>
-        <label style={label}>邮箱地址</label>
+        <label style={label}>{t('labelEmail')}</label>
         <input
           type="email"
           placeholder="name@example.com"
@@ -423,7 +423,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         />
       </div>
       <div style={fieldWrap('password')}>
-        <label style={label}>密码</label>
+        <label style={label}>{t('labelPassword')}</label>
         <input
           type="password"
           placeholder={t('passwordPlaceholder')}
@@ -446,7 +446,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const renderGoogleLogin = () => (
     <>
       <h2 style={sectionTitle}>{t('titleOAuth')}</h2>
-      <p style={sectionSub}>快速、安全，一键登录您的 Google 账号</p>
+      <p style={sectionSub}>{t('googleSubtitle')}</p>
       <button
         style={oauthBtn('google')}
         onMouseEnter={() => setOAuthHover(true)}
@@ -463,7 +463,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       </button>
       <div style={divider}>
         <div style={dividerLine} />
-        <span style={dividerText}>或</span>
+        <span style={dividerText}>{t('or')}</span>
         <div style={dividerLine} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -483,7 +483,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const renderAppleLogin = () => (
     <>
       <h2 style={sectionTitle}>{t('titleOAuth')}</h2>
-      <p style={sectionSub}>使用 Apple ID 安全登录您的账号</p>
+      <p style={sectionSub}>{t('appleSubtitle')}</p>
       <button
         style={{ ...oauthBtn('apple'), margin: 0 }}
         onClick={() => handleOAuthLogin('Apple')}
@@ -629,20 +629,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
           </div>
 
           {/* Dev: skip verification */}
-          <button
-            style={{
-              marginTop: 12, width: '100%', padding: '9px 0',
-              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)',
-              borderRadius: 10, color: '#6366f1', fontSize: 13, cursor: 'pointer',
-            }}
-            onClick={async () => {
-              await testLogin();
-              onClose();
-            }}
-          >
-            ⚡ 跳过验证直接登录（测试用）
-          </button>
-
           {/* Footer hint */}
           {!showBonus && (
             <p style={{

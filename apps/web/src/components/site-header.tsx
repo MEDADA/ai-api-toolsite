@@ -56,7 +56,7 @@ export function SiteHeader() {
             }}
           >
             <span style={{ fontSize: 22 }}>🎨</span>
-            <span>{t('image').split(' ')[0] === '图片' ? 'AI 工具站' : 'AI Toolsite'}</span>
+            <span>{locale === 'zh' ? 'AI 工具站' : 'AI Toolsite'}</span>
           </Link>
 
           {/* Nav */}

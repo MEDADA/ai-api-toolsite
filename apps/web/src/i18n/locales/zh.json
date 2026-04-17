@@ -216,7 +216,15 @@
     "tagline": "AI 创作，一触即达",
     "footerHint": "登录即表示同意《用户协议》和《隐私政策》",
     "bonusTitle": "🎉 赠送 ¥5 体验金！",
-    "bonusDesc": "首次登录赠送体验金，快去体验吧"
+    "bonusDesc": "首次登录赠送体验金，快去体验吧",
+    "promoText": "首次登录赠送 ¥5 体验金，轻松体验全部功能",
+    "labelPhone": "手机号",
+    "labelEmail": "邮箱地址",
+    "labelPassword": "密码",
+    "emailSubtitle": "支持 Gmail、Outlook 等主流邮箱登录",
+    "googleSubtitle": "快速、安全，一键登录您的 Google 账号",
+    "appleSubtitle": "使用 Apple ID 安全登录您的账号",
+    "or": "或"
   },
   "toast": {
     "needLogin": "请先登录",

@@ -216,7 +216,15 @@
     "tagline": "AI Creation at Your Fingertips",
     "footerHint": "By logging in, you agree to our Terms of Service and Privacy Policy",
     "bonusTitle": "🎉 ¥5 Free Credit!",
-    "bonusDesc": "New user bonus — start creating now"
+    "bonusDesc": "New user bonus — start creating now",
+    "promoText": "First login bonus: ¥5 free credit to try all features",
+    "labelPhone": "Phone number",
+    "labelEmail": "Email address",
+    "labelPassword": "Password",
+    "emailSubtitle": "Supports Gmail, Outlook and other major email providers",
+    "googleSubtitle": "Quick, secure — sign in with your Google account",
+    "appleSubtitle": "Securely sign in with your Apple ID",
+    "or": "or"
   },
   "toast": {
     "needLogin": "Please login first",
