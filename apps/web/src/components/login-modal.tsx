@@ -61,13 +61,13 @@ export function LoginModal({ onClose }: LoginModalProps) {
   // ─── Send code ────────────────────────────────────────────────────────────
   const handleSendCode = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      error(tToast('invalidPhone'));
+      error(t('invalidPhone'));
       return;
     }
     setLoading(true);
     try {
       await sendCode(phone);
-      success(tToast('codeSent'));
+      success(t('codeSent'));
       setCountdown(60);
       const timer = setInterval(() => {
         setCountdown((c) => {
@@ -77,7 +77,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       }, 1000);
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; _response?: { reason?: string } };
-      error(err.code || err.message || tToast('sendFailed'));
+      error(err.code || err.message || t('sendFailed'));
     } finally {
       setLoading(false);
     }
@@ -86,22 +86,22 @@ export function LoginModal({ onClose }: LoginModalProps) {
   // ─── Code login ──────────────────────────────────────────────────────────
   const handleCodeLogin = async () => {
     if (code.length !== 6) {
-      error(tToast('invalidCode'));
+      error(t('invalidCode'));
       return;
     }
     setLoading(true);
     try {
       await login(phone, code);
-      success(tToast('loginSuccess'));
+      success(t('loginSuccess'));
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; status?: number; _response?: { reason?: string } };
       // 401 = invalid or expired code; 400 = other validation error
       if (err.code === 'INVALID_CODE' || err.status === 401) {
-        error(tToast('invalidCode'));
+        error(t('invalidCode'));
       } else {
-        error(err.code || err.message || tToast('loginFailed'));
+        error(err.code || err.message || t('loginFailed'));
       }
     } finally {
       setLoading(false);
@@ -111,7 +111,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
   // ─── Password login ──────────────────────────────────────────────────────
   const handlePasswordLogin = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      error(tToast('invalidPhone'));
+      error(t('invalidPhone'));
       return;
     }
     if (!password) {
@@ -121,7 +121,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
     setLoading(true);
     try {
       await loginByPassword(phone, password);
-      success(tToast('loginSuccess'));
+      success(t('loginSuccess'));
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
     } catch (e: unknown) {
@@ -132,7 +132,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       } else if (reason === 'INVALID_PASSWORD') {
         error(t('invalidPassword'));
       } else {
-        error(reason || err.message || tToast('loginFailed'));
+        error(reason || err.message || t('loginFailed'));
       }
     } finally {
       setLoading(false);
@@ -142,11 +142,11 @@ export function LoginModal({ onClose }: LoginModalProps) {
   // ─── Register ─────────────────────────────────────────────────────────────
   const handleRegister = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      error(tToast('invalidPhone'));
+      error(t('invalidPhone'));
       return;
     }
     if (code.length !== 6) {
-      error(tToast('invalidCode'));
+      error(t('invalidCode'));
       return;
     }
     if (password.length < 6) {
@@ -169,9 +169,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
       if (reason === 'PHONE_REGISTERED') {
         error(t('phoneRegistered'));
       } else if (reason === 'INVALID_CODE') {
-        error(tToast('invalidCode'));
+        error(t('invalidCode'));
       } else {
-        error(reason || err.message || tToast('loginFailed'));
+        error(reason || err.message || t('loginFailed'));
       }
     } finally {
       setLoading(false);

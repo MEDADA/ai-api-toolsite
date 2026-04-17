@@ -31,8 +31,8 @@ export interface UpstreamRequest {
 const MODEL_MAP: Record<string, { apiModel: string; minPixels: number }> = {
   'doubao-seedream-5.0-lite': { apiModel: 'doubao-seedream-5-0-260128', minPixels: 1920 * 1920 },
   'doubao-seedream-4.5':       { apiModel: 'doubao-seedream-4-5-251128', minPixels: 1920 * 1920 },
-  'doubao-seedream-4.0':       { apiModel: 'doubao-seedream-4-0-250828', minPixels: 512  * 512  },
-  'doubao-seedream-3.0-t2i':   { apiModel: 'doubao-seedream-3-0-t2i-250415', minPixels: 512 * 512 },
+  'doubao-seedream-4.0':       { apiModel: 'doubao-seedream-4-0-250828', minPixels: 1920 * 1920 },
+  'doubao-seedream-3.0-t2i':   { apiModel: 'doubao-seedream-3-0-t2i-250415', minPixels: 1920 * 1920 },
 };
 
 function resolveModel(raw: string | undefined): string {
