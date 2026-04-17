@@ -19,7 +19,11 @@ const HISTORY = [
 ];
 
 function Waveform() {
-  const bars = Array.from({ length: 40 }, (_, i) => Math.random() * 30 + 5);
+  const [bars, setBars] = useState<number[]>([]);
+  useEffect(() => {
+    // Generate bars only on client to avoid SSR/hydration mismatch
+    setBars(Array.from({ length: 40 }, () => Math.random() * 30 + 5));
+  }, []);
   return (
     <div className={styles.waveform}>
       {bars.map((h, i) => (
