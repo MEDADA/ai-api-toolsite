@@ -247,13 +247,28 @@ export default function VideoPage() {
             {history.map(item => (
               item.status === 'generating' ? (
                 <div key={item.id} className={`${styles.historyCard} ${styles.generatingCard}`}>
-                  <div className={styles.genHeader}><span className={styles.genLabel}>🎬 生成中</span></div>
+                  <div className={styles.genHeader}>
+                    <span className={styles.genLabel}>🎬 {item.time}</span>
+                    {item.progress !== undefined && (
+                      <span style={{ fontSize: 9, color: '#60a5fa', marginLeft: 'auto' }}>{item.progress}%</span>
+                    )}
+                  </div>
                   <div className={styles.genPrompt}>{item.prompt}</div>
-                  <div className={styles.genProgressTrack}><div className={styles.genProgressBar} style={{ width: '60%' }} /></div>
+                  <div className={styles.genProgressTrack}>
+                    <div className={styles.genProgressBar} style={{ width: `${item.progress ?? 0}%` }} />
+                  </div>
                 </div>
               ) : (
-                <div key={item.id} className={styles.historyCard} onClick={() => window.open(item.img, '_blank')}>
-                  <img className={styles.historyThumb} src={item.img} alt={item.prompt} loading="lazy" />
+                <div key={item.id} className={styles.historyCard}>
+                  <video
+                    className={styles.historyThumb}
+                    src={item.img}
+                    controls
+                    muted
+                    playsInline
+                    preload="metadata"
+                    style={{ width: '100%', display: 'block', background: '#000' }}
+                  />
                   <div className={styles.historyBody}>
                     <span className={styles.historyTag}>{item.model}</span>
                     <p className={styles.historyPrompt}>{item.prompt}</p>

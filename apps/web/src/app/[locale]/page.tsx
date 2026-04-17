@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useTranslations, useLocale } from 'next-intl';
 import { useEffect, useRef } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 
 const SHOWROOM_IMAGES = [
   { src: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&q=80', tag: 'FLUX.2  ·  写实人像' },
@@ -18,8 +20,13 @@ export default function HomePage() {
   const t = useTranslations('home');
   const tf = useTranslations('footer');
   const locale = useLocale();
+  const router = useRouter();
   const L = (path: string) => `/${locale}${path}`;
   const bgRef = useRef<HTMLDivElement>(null);
+
+  const { isLoggedIn, user, balance } = useAuth();
+  const showGiftBanner = isLoggedIn && user?.gift_credit === true;
+  const balanceYuan = balance ? balance.available / 100 : null;
 
   useEffect(() => {
     const el = bgRef.current;
@@ -52,6 +59,13 @@ export default function HomePage() {
             无需 API Key，按次计费，新用户赠送体验金
           </p>
 
+          {/* Balance display */}
+          {balanceYuan !== null && (
+            <div className={styles.heroBalance}>
+              💰 {balanceYuan.toFixed(2)} 元
+            </div>
+          )}
+
           <div className={styles.heroCta}>
             <Link href={L("/image")} className={styles.ctaPrimary}>
               🎨 {t('ctaPrimary')}
@@ -62,6 +76,25 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ── First-login Gift Banner ───────────── */}
+      {showGiftBanner && (
+        <section className={styles.giftBanner}>
+          <div className={styles.giftBannerInner}>
+            <span className={styles.giftBannerIcon}>🎁</span>
+            <div className={styles.giftBannerText}>
+              <strong>赠送 5 元体验金，快去体验！</strong>
+              <span>首次登录赠送体验金，生成第一张图片吧</span>
+            </div>
+            <button
+              className={styles.giftBannerBtn}
+              onClick={() => router.push(L('/image'))}
+            >
+              立即生成第一张图片 →
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ── Showroom ─────────────────────────── */}
       <section className={styles.showroom}>

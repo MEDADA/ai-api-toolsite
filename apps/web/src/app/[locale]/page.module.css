@@ -102,6 +102,19 @@
   flex-wrap: wrap;
 }
 
+.heroBalance {
+  display: inline-block;
+  margin-bottom: 20px;
+  padding: 6px 18px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 100px;
+  color: #f59e0b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .ctaPrimary {
   display: inline-flex;
   align-items: center;
@@ -141,6 +154,66 @@
 .ctaSecondary:hover {
   background: rgba(255,255,255,0.12);
   color: #fff;
+}
+
+/* ── First-Login Gift Banner ──────────────────────── */
+.giftBanner {
+  background: linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(168,85,247,0.15) 100%);
+  border-top: 1px solid rgba(99,102,241,0.25);
+  border-bottom: 1px solid rgba(99,102,241,0.25);
+  padding: 20px 24px;
+}
+
+.giftBannerInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.giftBannerIcon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.giftBannerText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 200px;
+}
+
+.giftBannerText strong {
+  font-size: 1rem;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.giftBannerText span {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.giftBannerBtn {
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.4);
+}
+
+.giftBannerBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(99,102,241,0.55);
 }
 
 /* ── Showroom ─────────────────────────────────────── */
