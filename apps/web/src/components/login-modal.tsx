@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from 'next-intl';
 
 interface LoginModalProps {
@@ -14,9 +13,7 @@ type PhoneMode = 'code' | 'password' | 'register';
 
 export function LoginModal({ onClose }: LoginModalProps) {
   const { login, loginByPassword, registerByPhone, sendCode } = useAuth();
-  const { success, error } = useToast();
   const t = useTranslations('login');
-  const tToast = useTranslations('toast');
 
   const [activeTab, setActiveTab] = useState<Tab>('phone');
   const [phoneMode, setPhoneMode] = useState<PhoneMode>('code');
@@ -34,6 +31,8 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const [mounted, setMounted] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [btnHover, setBtnHover] = useState(false);
   const [oauthHover, setOAuthHover] = useState(false);
@@ -63,13 +62,13 @@ export function LoginModal({ onClose }: LoginModalProps) {
   // ─── Send code ────────────────────────────────────────────────────────────
   const handleSendCode = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      error(t('invalidPhone'));
+      setFormError(t('invalidPhone'));
       return;
     }
     setLoading(true);
     try {
       await sendCode(phone);
-      success(t('codeSent'));
+      setFormSuccess(t('codeSent')); setTimeout(() => setFormSuccess(''), 3000);
       setCountdown(60);
       const timer = setInterval(() => {
         setCountdown((c) => {
@@ -81,7 +80,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       const err = e as { code?: string; message?: string; _response?: { reason?: string } };
       const msg = err.code || err.message || t('sendFailed');
       setErrorMsg(msg);
-      error(msg);
+      setFormError(msg);
     } finally {
       setLoading(false);
     }
@@ -90,14 +89,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
   // ─── Code login ──────────────────────────────────────────────────────────
   const handleCodeLogin = async () => {
     if (code.length !== 6) {
-      error(t('invalidCode'));
+      setFormError(t('invalidCode'));
       return;
     }
     setErrorMsg('');
     setLoading(true);
     try {
       await login(phone, code);
-      success(t('loginSuccess'));
+      setFormSuccess(t('loginSuccess'));
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
     } catch (e: unknown) {
@@ -108,7 +107,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         msg = t('invalidCode');
       }
       setErrorMsg(msg);
-      error(msg);
+      setFormError(msg);
     } finally {
       setLoading(false);
     }
@@ -117,18 +116,18 @@ export function LoginModal({ onClose }: LoginModalProps) {
   // ─── Password login ──────────────────────────────────────────────────────
   const handlePasswordLogin = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      error(t('invalidPhone'));
+      setFormError(t('invalidPhone'));
       return;
     }
     if (!password) {
-      error(t('passwordPlaceholder'));
+      setFormError(t('passwordPlaceholder'));
       return;
     }
     setErrorMsg('');
     setLoading(true);
     try {
       await loginByPassword(phone, password);
-      success(t('loginSuccess'));
+      setFormSuccess(t('loginSuccess'));
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
     } catch (e: unknown) {
@@ -141,7 +140,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         msg = t('invalidPassword');
       }
       setErrorMsg(msg);
-      error(msg);
+      setFormError(msg);
     } finally {
       setLoading(false);
     }
@@ -150,26 +149,26 @@ export function LoginModal({ onClose }: LoginModalProps) {
   // ─── Register ─────────────────────────────────────────────────────────────
   const handleRegister = async () => {
     if (!/^1[3-9]\d{9}$/.test(phone)) {
-      error(t('invalidPhone'));
+      setFormError(t('invalidPhone'));
       return;
     }
     if (code.length !== 6) {
-      error(t('invalidCode'));
+      setFormError(t('invalidCode'));
       return;
     }
     if (password.length < 6) {
-      error(t('passwordTooShort'));
+      setFormError(t('passwordTooShort'));
       return;
     }
     if (password !== confirmPassword) {
-      error(t('confirmPasswordMismatch') || '两次密码输入不一致');
+      setFormError(t('confirmPasswordMismatch'));
       return;
     }
     setErrorMsg('');
     setLoading(true);
     try {
       await registerByPhone(phone, code, password);
-      success(t('registerSuccess') + ' ' + t('bonusTitle'));
+      setFormSuccess(t('registerSuccess') + ' ' + t('bonusTitle'));
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
     } catch (e: unknown) {
@@ -182,7 +181,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         msg = t('invalidCode');
       }
       setErrorMsg(msg);
-      error(msg);
+      setFormError(msg);
     } finally {
       setLoading(false);
     }
@@ -507,7 +506,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           type="tel"
           placeholder={t('phonePlaceholder')}
           value={phone}
-          onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
+          onChange={(e) => { setPhone((e.target as HTMLInputElement).value); setFormError(''); }}
           onFocus={() => setFocusedField('phone')}
           onBlur={() => setFocusedField(null)}
           maxLength={11}
@@ -590,7 +589,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           type="tel"
           placeholder={t('phonePlaceholder')}
           value={phone}
-          onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
+          onChange={(e) => { setPhone((e.target as HTMLInputElement).value); setFormError(''); }}
           onFocus={() => setFocusedField('phone')}
           onBlur={() => setFocusedField(null)}
           maxLength={11}
@@ -678,7 +677,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             type="tel"
             placeholder={t('phonePlaceholder')}
             value={phone}
-            onChange={(e) => setPhone((e.target as HTMLInputElement).value)}
+            onChange={(e) => { setPhone((e.target as HTMLInputElement).value); setFormError(''); }}
             onFocus={() => setFocusedField('phone')}
             onBlur={() => setFocusedField(null)}
             maxLength={11}
@@ -1047,6 +1046,26 @@ export function LoginModal({ onClose }: LoginModalProps) {
             {activeTab === 'google' && renderGoogleLogin()}
             {activeTab === 'apple' && renderAppleLogin()}
           </div>
+
+          {/* Error / Success banners */}
+          {formError && (
+            <div style={{
+              marginTop: 12, padding: '10px 14px',
+              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: 8, color: '#f87171', fontSize: 13,
+            }}>
+              ❌ {formError}
+            </div>
+          )}
+          {formSuccess && (
+            <div style={{
+              marginTop: 12, padding: '10px 14px',
+              background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+              borderRadius: 8, color: '#34d399', fontSize: 13,
+            }}>
+              ✅ {formSuccess}
+            </div>
+          )}
 
           {/* Footer hint */}
           {!showBonus && (
