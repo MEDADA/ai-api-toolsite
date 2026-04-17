@@ -520,13 +520,26 @@ export function LoginModal({ onClose }: LoginModalProps) {
           type="text"
           placeholder={t('codePlaceholder')}
           value={code}
-          onChange={(e) => setCode((e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6))}
+          onChange={(e) => { setCode((e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6)); setErrorMsg(''); }}
           onFocus={() => setFocusedField('code')}
           onBlur={() => setFocusedField(null)}
           maxLength={6}
           style={codeInput}
         />
       </div>
+      {errorMsg && (
+        <div style={{
+          color: '#ef4444',
+          fontSize: 13,
+          padding: '8px 12px',
+          background: 'rgba(239,68,68,0.1)',
+          borderRadius: 6,
+          marginTop: 4,
+          marginBottom: 8,
+        }}>
+          {errorMsg}
+        </div>
+      )}
       <button
         style={ghostBtn}
         disabled={countdown > 0}
@@ -609,6 +622,19 @@ export function LoginModal({ onClose }: LoginModalProps) {
           </button>
         </div>
       </div>
+      {errorMsg && (
+        <div style={{
+          color: '#ef4444',
+          fontSize: 13,
+          padding: '8px 12px',
+          background: 'rgba(239,68,68,0.1)',
+          borderRadius: 6,
+          marginTop: 4,
+          marginBottom: 8,
+        }}>
+          {errorMsg}
+        </div>
+      )}
 
       <button
         style={primaryBtn}
@@ -742,6 +768,19 @@ export function LoginModal({ onClose }: LoginModalProps) {
           </button>
         </div>
       </div>
+      {errorMsg && (
+        <div style={{
+          color: '#ef4444',
+          fontSize: 13,
+          padding: '8px 12px',
+          background: 'rgba(239,68,68,0.1)',
+          borderRadius: 6,
+          marginTop: 4,
+          marginBottom: 8,
+        }}>
+          {errorMsg}
+        </div>
+      )}
 
       <button
         style={primaryBtn}
