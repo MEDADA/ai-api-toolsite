@@ -172,10 +172,24 @@ export default function ImagePage() {
         }
       };
 
+      let sseConnected = false;
+      const sseTimeout = setTimeout(() => {
+        if (!sseConnected) {
+          setGenProgress(t('startedMsg') + '...');
+        }
+      }, 8000);
+
+      es.onopen = () => {
+        sseConnected = true;
+        clearTimeout(sseTimeout);
+      };
+
       es.onerror = () => {
+        clearTimeout(sseTimeout);
         es.close();
         setIsGenerating(false);
         setGenProgress('');
+        showError('实时连接中断，请刷新页面查看结果');
       };
     } catch (err) {
       const e = err as { message?: string; code?: string };
