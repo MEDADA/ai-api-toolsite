@@ -14,10 +14,18 @@ export function LanguageSwitcher() {
   const otherLabel = locale === 'zh' ? 'EN' : '中文';
 
   const handleSwitch = () => {
-    // Replace the current locale prefix with the other locale
-    const segments = pathname.split('/');
-    segments[1] = otherLocale;
-    const newPath = segments.join('/');
+    // localePrefix: 'as-needed' means zh has no URL prefix, en shows '/en'
+    const segments = pathname.split('/').filter(Boolean); // ['zh', 'image'] or ['image']
+    const isFirstSegmentLocale = routing.locales.includes(segments[0] as 'zh' | 'en');
+    let newPath: string;
+    if (isFirstSegmentLocale) {
+      // Replace existing locale in URL
+      segments[0] = otherLocale;
+      newPath = '/' + segments.join('/');
+    } else {
+      // No locale prefix yet (default zh), prepend 'en' for English
+      newPath = otherLocale === 'en' ? `/${otherLocale}${pathname}` : pathname;
+    }
     router.push(newPath);
   };
 

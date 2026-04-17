@@ -14,7 +14,8 @@ export function SiteHeader() {
   const tDashboard = useTranslations('dashboard');
   const locale = useLocale();
   const pathname = usePathname();
-  const L = (path: string) => `/${locale}${path}`;
+  // localePrefix: 'as-needed' means zh locale doesn't show in URL
+  const L = (path: string) => locale === 'zh' ? path : `/${locale}${path}`;
   const [showLogin, setShowLogin] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -39,7 +40,7 @@ export function SiteHeader() {
         >
           {/* Logo */}
           <Link
-            href="/"
+            href={L('/')}
             style={{
               color: '#e2e8f0', fontSize: 18, fontWeight: 800,
               textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8,
@@ -57,7 +58,8 @@ export function SiteHeader() {
               { href: L('/video'), label: t('video') },
               { href: L('/audio'), label: t('audio') },
             ].map((item) => {
-              const isActive = pathname === item.href;
+              // Active: match both locale-prefixed and non-prefixed URLs
+              const isActive = pathname === item.href || pathname === `/${locale}${item.href}`;
               return (
               <Link
                 key={item.href}

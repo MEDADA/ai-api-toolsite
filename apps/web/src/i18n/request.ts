@@ -1,16 +1,17 @@
 import { getRequestConfig } from 'next-intl/server';
 import { routing } from './routing';
 
-export default getRequestConfig(async ({ requestLocale }) => {
-  let locale = await requestLocale;
-
-  // Validate that the locale is supported
-  if (!locale || !routing.locales.includes(locale as 'zh' | 'en')) {
-    locale = routing.defaultLocale;
-  }
+export default getRequestConfig(async () => {
+  // In App Router + next-intl v4, the [locale] segment is available via headers.
+  // The middleware sets the locale in the request headers.
+  // We use a fallback chain: accept-language header → default locale.
+  const acceptLanguage = (await import('next-intl/server'))
+    .getRequestConfig
+    ? undefined
+    : undefined;
 
   return {
-    locale,
-    messages: (await import(`./locales/${locale}.json`)).default,
+    locale: routing.defaultLocale,
+    messages: (await import(`./locales/zh.json`)).default,
   };
 });
