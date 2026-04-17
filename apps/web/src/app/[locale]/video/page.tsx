@@ -92,7 +92,7 @@ export default function VideoPage() {
         body.init_image = initImage;
       }
 
-      const res = await fetch('http://localhost:3002/api/v1/tasks/generate', {
+      const res = await fetch('http://localhost:3004/api/v1/tasks/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
@@ -101,7 +101,7 @@ export default function VideoPage() {
       if (!json.ok) throw new Error(json.message || '创建任务失败');
 
       const { task_id, stream_url } = json.data;
-      const actualStreamUrl = `http://localhost:3002${stream_url}`;
+      const actualStreamUrl = `http://localhost:3004${stream_url}`;
 
       const es = new EventSource(actualStreamUrl);
 
