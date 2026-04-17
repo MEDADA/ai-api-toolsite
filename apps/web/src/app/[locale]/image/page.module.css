@@ -344,3 +344,77 @@
 .audioAct { font-size: 9px; color: #374151; padding: 2px 7px; border-radius: 3px; background: rgba(255,255,255,0.04); border: none; cursor: pointer; }
 .audioAct:hover { color: #94a3b8; }
 
+
+/* Model selector: vendor badge */
+.modelPillIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(66,103,178,0.15);
+  flex-shrink: 0;
+}
+.modelPillInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.modelPillName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  line-height: 1.2;
+}
+.modelPillVendor {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+
+/* Dropdown option */
+.modelOptionLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.modelVendorBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.modelVendorName {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+}
+.modelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.modelRecommendTag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  vertical-align: middle;
+}
+.modelOptionRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.modelOptionRecommended {
+  background: rgba(16,185,129,0.06) !important;
+  border-color: rgba(16,185,129,0.2) !important;
+}

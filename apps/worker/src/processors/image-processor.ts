@@ -1,18 +1,18 @@
 /**
  * Image Generation Worker Processor.
- * Handles FLUX, Wanxiang, and other image model generation jobs.
+ * Handles Doubao Seedream image model generation jobs.
+ * (Migrated from Replicate/FLUX to Doubao Ark API)
  */
 
 import type { Job } from 'bullmq';
 import type { PrismaClient } from '@prisma/client';
 import { GenerationJobData } from '../queues/generation-queue.js';
-import { validate, toUpstream, parseResponse, pollStatus, estimateCost, FluxImageParams } from '../adapters/image-adapter.js';
+import { validate, toUpstream, callAPI, DoubaoSeedreamParams } from '../adapters/doubao-seedream.adapter.js';
 import { uploadToOSS } from '../lib/oss-uploader.js';
 import { publishSSE } from '../lib/sse-emitter.js';
 
-const REPLICATE_API_KEY = process.env.REPLICATE_API_TOKEN ?? '';
-const REPLICATE_BASE_URL = 'https://api.replicate.com';
-const FLUX_UNIT_PRICE = 50; // ¥0.5 = 50分
+const ARK_API_KEY = process.env.ARK_API_KEY ?? '';
+const DOUBAO_UNIT_PRICE = 50; // ¥0.5 = 50分
 
 export async function imageProcessor(
   job: Job<GenerationJobData>,
@@ -40,90 +40,38 @@ export async function imageProcessor(
     return;
   }
 
-  const params = validation.params as FluxImageParams;
+  const params = validation.params as DoubaoSeedreamParams;
 
-  // ── Step 2: Build upstream request ──────────────────────────────
-  const apiKey = REPLICATE_API_KEY || (await getChannelApiKey(prisma, modelSlug));
+  // ── Step 2: Get API key ─────────────────────────────────────────
+  const apiKey = ARK_API_KEY || (await getChannelApiKey(prisma, modelSlug));
   if (!apiKey) {
     await handleFailure(taskId, userId, job.data.totalCost, 'No API key configured', prisma);
     return;
   }
 
-  const upstreamReq = toUpstream(params, apiKey, REPLICATE_BASE_URL);
+  // ── Step 3: Build upstream request ──────────────────────────────
+  const upstreamReq = toUpstream(params, apiKey);
 
-  // ── Step 3: Call upstream API ───────────────────────────────────
-  let predictionId = '';
+  // ── Step 4: Update status → PROCESSING ─────────────────────────
+  await prisma.generationTask.update({
+    where: { id: taskId },
+    data: {
+      status: 'PROCESSING',
+      started_at: new Date(),
+      upstream_job_id: `doubao-${taskId}`,
+    },
+  });
+  await publishSSE(taskId, 'task_started', { task_id: taskId, started_at: new Date().toISOString() });
+
+  // ── Step 5: Call Doubao API (synchronous, no polling needed) ────
   try {
-    const response = await fetch(upstreamReq.url, {
-      method: 'POST',
-      headers: upstreamReq.headers,
-      body: JSON.stringify(upstreamReq.body),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Replicate API error ${response.status}: ${errText}`);
-    }
-
-    const data = await response.json() as Record<string, unknown>;
-    predictionId = data.id as string;
-
-    await prisma.generationTask.update({
-      where: { id: taskId },
-      data: { upstream_job_id: predictionId },
-    });
+    const result = await callAPI(upstreamReq);
 
     // Log the request
-    await logProviderRequest(prisma, modelSlug, taskId, predictionId, upstreamReq, data, response.status);
+    await logProviderRequest(prisma, modelSlug, taskId, `doubao-${taskId}`, upstreamReq, result, 200);
 
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Upstream call failed';
-    await handleFailure(taskId, userId, job.data.totalCost, msg, prisma);
-    return;
-  }
-
-  // ── Step 4: Poll until complete (or timeout) ────────────────────
-  const timeoutAt = Date.now() + 5 * 60 * 1000; // 5 min
-
-  try {
-    await prisma.generationTask.update({
-      where: { id: taskId },
-      data: {
-        status: 'PROCESSING',
-        started_at: new Date(),
-      },
-    });
-    await publishSSE(taskId, 'task_started', { task_id: taskId, started_at: new Date().toISOString() });
-
-    let pollCount = 0;
-    while (Date.now() < timeoutAt) {
-      await sleep(5000); // Poll every 5 seconds
-
-      const pollRes = await pollStatus(predictionId, apiKey, REPLICATE_BASE_URL);
-      pollCount++;
-
-      if (pollRes.status === 'completed' && pollRes.result) {
-        // ── Step 5: Success — upload to OSS, save outputs, settle ─
-        await handleSuccess(taskId, userId, job.data.totalCost, pollRes.result, params, prisma);
-        return;
-      }
-
-      if (pollRes.status === 'failed') {
-        const error = pollRes.result?.error ?? 'Generation failed';
-        await handleFailure(taskId, userId, job.data.totalCost, error, prisma);
-        return;
-      }
-
-      // Progress update
-      await publishSSE(taskId, 'task_progress', {
-        task_id: taskId,
-        progress: Math.min(90, pollCount * 10),
-        message: pollRes.status === 'pending' ? '排队中...' : '生成中...',
-      });
-    }
-
-    // Timeout
-    await handleFailure(taskId, userId, job.data.totalCost, 'TIMEOUT', prisma);
+    // ── Step 6: Success — upload to OSS, save outputs, settle ─────
+    await handleSuccess(taskId, userId, job.data.totalCost, result, params, prisma);
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Processing error';
@@ -137,10 +85,15 @@ async function handleSuccess(
   taskId: string,
   userId: string,
   totalCost: number,
-  result: { outputs: Array<{ url: string; thumbnail_url?: string; width?: number; height?: number; mime_type?: string }> },
-  params: FluxImageParams,
+  result: { outputs: Array<{ url: string; mime_type?: string; sort_order?: number }> },
+  params: DoubaoSeedreamParams,
   prisma: PrismaClient
 ) {
+  // Parse width/height from size string (e.g. "2048x2048")
+  const [widthStr, heightStr] = (params.size ?? '2048x2048').split('x');
+  const width = parseInt(widthStr);
+  const height = parseInt(heightStr ?? widthStr);
+
   // 1. Upload generated images to OSS
   const outputs = await Promise.all(
     result.outputs.map(async (output, i) => {
@@ -149,19 +102,19 @@ async function handleSuccess(
         await uploadToOSS(output.url, ossKey);
         return {
           file_url: output.url,
-          thumbnail_url: output.thumbnail_url,
-          width: output.width ?? parseInt(params.width),
-          height: output.height ?? parseInt(params.height),
+          thumbnail_url: undefined as string | undefined,
+          width,
+          height,
           mime_type: output.mime_type ?? 'image/png',
-          sort_order: i,
+          sort_order: output.sort_order ?? i,
         };
       } catch {
         return {
           file_url: output.url,
-          width: output.width ?? parseInt(params.width),
-          height: output.height ?? parseInt(params.height),
+          width,
+          height,
           mime_type: output.mime_type ?? 'image/png',
-          sort_order: i,
+          sort_order: output.sort_order ?? i,
         };
       }
     })
@@ -291,7 +244,6 @@ async function handleFailure(
 }
 
 async function getChannelApiKey(prisma: PrismaClient, modelSlug: string): Promise<string> {
-  // Try to find active channel for this model
   const channel = await prisma.providerChannel.findFirst({
     where: {
       model: { slug: modelSlug },
@@ -327,8 +279,4 @@ async function logProviderRequest(
       status_code: statusCode,
     },
   }).catch(() => {});
-}
-
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }

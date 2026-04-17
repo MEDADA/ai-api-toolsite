@@ -9,10 +9,46 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import type { SSECompleted, SSEFailed, SSEProgress, SSETaskQueued } from '@/lib/shared-types';
 
+// Doubao Seedream 系列 — 火山引擎官方模型
+const DOUBAD_LOGO = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><circle cx="12" cy="12" r="11" fill="#4267B2"/><path d="M12 6C8.686 6 6 8.686 6 12s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="white"/><circle cx="12" cy="12" r="2" fill="white"/></svg>`;
+
 const MODELS = [
-  { id: 'flux-2-schnell', icon: '⚡', name: 'FLUX.2 schnell', desc: '快速 · 写实/动漫', price: '¥0.5/张' },
-  { id: 'wanxiang-2-6', icon: '🔥', name: '万相 2.6', desc: '高质量 · 中文理解强', price: '¥0.5/张' },
-  { id: 'flux-2-dev', icon: '✨', name: 'FLUX.2 dev', desc: '顶配 · 细节极致', price: '¥1.2/张' },
+  {
+    id: 'doubao-seedream-4.0',
+    name: 'Doubao Seedream 4.0',
+    desc: '免费额度 · 图文生图 · 高清稳定',
+    price: '¥0.5/张',
+    vendor: '火山引擎',
+    vendorLogo: DOUBAD_LOGO,
+    recommended: true,
+  },
+  {
+    id: 'doubao-seedream-5.0-lite',
+    name: 'Doubao Seedream 5.0 Lite',
+    desc: '最新 · 组图 · 流式输出',
+    price: '¥0.5/张',
+    vendor: '火山引擎',
+    vendorLogo: DOUBAD_LOGO,
+    recommended: false,
+  },
+  {
+    id: 'doubao-seedream-4.5',
+    name: 'Doubao Seedream 4.5',
+    desc: '4K 高清 · 组图支持',
+    price: '¥0.5/张',
+    vendor: '火山引擎',
+    vendorLogo: DOUBAD_LOGO,
+    recommended: false,
+  },
+  {
+    id: 'doubao-seedream-3.0-t2i',
+    name: 'Doubao Seedream 3.0',
+    desc: '基础文生图 · 快速稳定',
+    price: '¥0.5/张',
+    vendor: '火山引擎',
+    vendorLogo: DOUBAD_LOGO,
+    recommended: false,
+  },
 ];
 
 const SIZES = ['512', '768', '1024', '576x1024'];
@@ -168,23 +204,34 @@ export default function ImagePage() {
           <div className={styles.topBar}>
             <div className={styles.modelSelector} ref={dropdownRef}>
               <div className={styles.modelPill} onClick={() => setDropdownOpen(d => !d)}>
-                <span className={styles.modelPillIcon}>{selectedModel!.icon}</span>
-                <span className={styles.modelPillName}>{selectedModel!.name}</span>
+                <span className={styles.modelPillIcon} dangerouslySetInnerHTML={{ __html: selectedModel!.vendorLogo }} />
+                <div className={styles.modelPillInfo}>
+                  <span className={styles.modelPillName}>{selectedModel!.name}</span>
+                  <span className={styles.modelPillVendor}>{selectedModel!.vendor}</span>
+                </div>
                 <span style={{ fontSize: 9, color: '#475569' }}>▼</span>
               </div>
               <div className={`${styles.modelDropdown} ${dropdownOpen ? styles.modelDropdownOpen : ''}`}>
                 {MODELS.map(m => (
-                  <div key={m.id} className={`${styles.modelOption} ${m.id === selectedModel!.id ? styles.modelOptionSelected : ''}`}
+                  <div key={m.id} className={`${styles.modelOption} ${m.id === selectedModel!.id ? styles.modelOptionSelected : ''} ${m.recommended ? styles.modelOptionRecommended : ''}`}
                     onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}>
                     <div className={styles.modelOptionLeft}>
-                      <span style={{ fontSize: 16 }}>{m.icon}</span>
-                      <div>
-                        <div className={styles.modelOptionName}>{m.name}</div>
+                      <div className={styles.modelVendorBadge}>
+                        <span dangerouslySetInnerHTML={{ __html: m.vendorLogo }} />
+                        <span className={styles.modelVendorName}>{m.vendor}</span>
+                      </div>
+                      <div className={styles.modelInfo}>
+                        <div className={styles.modelOptionName}>
+                          {m.name}
+                          {m.recommended && <span className={styles.modelRecommendTag}>免费额度</span>}
+                        </div>
                         <div className={styles.modelOptionDesc}>{m.desc}</div>
                       </div>
                     </div>
-                    <span className={styles.modelOptionPrice}>{m.price}</span>
-                    <span className={styles.modelOptionCheck}>✓</span>
+                    <div className={styles.modelOptionRight}>
+                      <span className={styles.modelOptionPrice}>{m.price}</span>
+                      <span className={styles.modelOptionCheck}>✓</span>
+                    </div>
                   </div>
                 ))}
               </div>
