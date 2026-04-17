@@ -29,11 +29,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
+  // Deduplicate by message: don't add if same message already exists
   const toast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = `toast_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    setToasts((prev) => [...prev, { id, message, type }]);
-    // Auto dismiss after 3s
-    setTimeout(() => dismiss(id), 3000);
+    setToasts((prev) => {
+      if (prev.some((t) => t.message === message)) return prev;
+      const id = `toast_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      // Auto dismiss after 3s
+      setTimeout(() => dismiss(id), 3000);
+      return [...prev, { id, message, type }];
+    });
   }, [dismiss]);
 
   const success = useCallback((message: string) => toast(message, 'success'), [toast]);
@@ -44,14 +48,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ toasts, toast, dismiss, success, error, warning, info }}>
       {children}
-      {/* Toast container — rendered at body level */}
+      {/* Toast container — mobile-friendly bottom center */}
       <div
         style={{
           position: 'fixed',
-          bottom: 24,
-          right: 24,
+          bottom: 80, // above the fixed generate button
+          left: 16,
+          right: 16,
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center',
           gap: 8,
           zIndex: 9999,
           pointerEvents: 'none',
@@ -68,12 +74,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 : t.type === 'warning' ? '#f59e0b'
                 : '#3b82f6',
               color: '#fff',
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 500,
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
               pointerEvents: 'all',
               cursor: 'pointer',
-              maxWidth: 320,
+              maxWidth: '100%',
+              width: 'fit-content',
+              textAlign: 'center',
             }}
             onClick={() => dismiss(t.id)}
           >
