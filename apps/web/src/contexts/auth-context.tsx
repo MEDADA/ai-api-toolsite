@@ -83,14 +83,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!refreshToken) { logout(); return; }
         const result = await apiClient.auth.refresh(refreshToken);
         const newToken = result.access_token;
+        const newRefreshToken = result.refresh_token.token;
         apiClient.setAuthToken(newToken);
         setToken(newToken);
         localStorage.setItem(TOKEN_KEY, newToken);
+        localStorage.setItem(REFRESH_KEY, newRefreshToken);
         // Reschedule
-        const rt2 = typeof localStorage !== 'undefined' ? localStorage.getItem(REFRESH_KEY) : null;
+        const rt2 = localStorage.getItem(REFRESH_KEY);
         if (rt2) {
           refreshTimerRef.current = setTimeout(async () => {
-            await apiClient.auth.refresh(rt2);
+            const rt = localStorage.getItem(REFRESH_KEY);
+            if (rt) await apiClient.auth.refresh(rt);
           }, (result.expires_in - 60) * 1000);
         }
       } catch {
@@ -103,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (phone: string, code: string): Promise<LoginResult> => {
     const result = await apiClient.auth.loginByCode(phone, code);
     const newToken = result.access_token;
-    const refreshToken = result.refresh_token;
+    const refreshToken = result.refresh_token.token;
 
     apiClient.setAuthToken(newToken);
     setToken(newToken);

@@ -110,7 +110,7 @@ class ApiClient {
         body: JSON.stringify({ phone, code }),
       }),
 
-    refresh: (refreshToken: string): Promise<{ ok: boolean; access_token: string; expires_in: number }> =>
+    refresh: (refreshToken: string): Promise<{ ok: boolean; access_token: string; expires_in: number; refresh_token: { token: string; jti: string } }> =>
       this.fetch('/api/v1/auth/refresh', {
         method: 'POST',
         body: JSON.stringify({ refresh_token: refreshToken }),

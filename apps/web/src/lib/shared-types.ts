@@ -50,7 +50,7 @@ export interface LoginResult {
     gift_credit: boolean;
   };
   access_token: string;
-  refresh_token: string;
+  refresh_token: { token: string; jti: string };
   expires_in: number;
 }
 
