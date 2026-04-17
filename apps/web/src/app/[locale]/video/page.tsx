@@ -1,8 +1,8 @@
 'use client';
-import styles from './page.module.css';
+import styles from '../image/page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useLocale } from 'next-intl';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 const MODELS = [
   { id: 'seedance', icon: '🎬', name: 'Seedance 1.5 Pro', desc: '高质量 · 中文理解强', price: '¥1.5/秒' },
@@ -11,6 +11,7 @@ const MODELS = [
 const DURATIONS = ['5秒', '10秒', '15秒'];
 const RESOLUTIONS = ['720p', '1080p'];
 const CAMERAS = ['固定', '环绕', '推进', '平移'];
+const PLACEHOLDER = '描述你想要的视频场景… 例如：无人机穿越峡谷，极速飞行体验';
 
 interface HistoryItem {
   id: string; model: string; prompt: string; time: string;
@@ -19,8 +20,8 @@ interface HistoryItem {
 
 export default function VideoPage() {
   const locale = useLocale();
-  const [mode, setMode] = useState<'text2vid' | 'img2vid'>('text2vid');
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [duration, setDuration] = useState(0);
   const [resolution, setResolution] = useState(0);
   const [camera, setCamera] = useState(0);
@@ -29,12 +30,23 @@ export default function VideoPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [showRefUpload, setShowRefUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleImageUpload = useCallback(async (file: File) => {
     setUploading(true);
     try {
-      // Upload to our OSS endpoint (or use local data URL as fallback)
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
@@ -76,7 +88,7 @@ export default function VideoPage() {
         duration: durationSec,
         resolution: RESOLUTIONS[resolution],
       };
-      if (mode === 'img2vid' && initImage) {
+      if (initImage) {
         body.init_image = initImage;
       }
 
@@ -122,7 +134,7 @@ export default function VideoPage() {
       setIsGenerating(false);
       alert(err.message);
     }
-  }, [prompt, isGenerating, selectedModel, duration, resolution, initImage, mode, RESOLUTIONS]);
+  }, [prompt, isGenerating, selectedModel, duration, resolution, initImage, RESOLUTIONS]);
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -131,48 +143,34 @@ export default function VideoPage() {
 
         {/* Left */}
         <aside className={styles.leftPanel}>
-          {/* Mode toggle */}
-          <div className={styles.modeToggle}>
-            {(['text2vid', 'img2vid'] as const).map(m => (
-              <button key={m} className={`${styles.modeBtn} ${mode === m ? styles.modeBtnActive : ''}`}
-                onClick={() => setMode(m)}>
-                {m === 'text2vid' ? '✍️ 文生视频' : '🖼️ 图生视频'}
-              </button>
-            ))}
-          </div>
 
-          {/* Image upload for img2vid */}
-          {mode === 'img2vid' && (
-            <div className={styles.imageUpload} onClick={() => fileInputRef.current?.click()}>
-              {uploading ? (
-                <span className={styles.uploadSpinner} />
-              ) : initImage ? (
-                <div className={styles.imagePreview}>
-                  <img src={initImage} alt="参考图" className={styles.previewImg} />
-                  <div className={styles.previewOverlay}>
-                    <span>点击更换</span>
-                  </div>
-                </div>
-              ) : (
-                <div className={styles.uploadPlaceholder}>
-                  <span className={styles.uploadIcon}>📷</span>
-                  <span className={styles.uploadText}>上传参考图片</span>
-                  <span className={styles.uploadHint}>支持 JPG/PNG，建议 16:9</span>
-                </div>
-              )}
-              <input ref={fileInputRef} type="file" accept="image/*" className={styles.hiddenInput}
-                onChange={handleFileChange} />
-              {initImage && (
-                <button className={styles.clearImage} onClick={e => { e.stopPropagation(); setInitImage(''); }}>✕</button>
-              )}
-            </div>
-          )}
-
+          {/* Top bar */}
           <div className={styles.topBar}>
-            <div className={styles.modelPill} onClick={() => setSelectedModel(selectedModel!.id === 'seedance' ? MODELS[1] : MODELS[0])}>
-              <span className={styles.modelPillIcon}>{selectedModel!.icon}</span>
-              <span className={styles.modelPillName}>{selectedModel!.name}</span>
+            {/* Model selector */}
+            <div className={styles.modelSelector} ref={dropdownRef}>
+              <div className={styles.modelPill} onClick={() => setDropdownOpen(d => !d)}>
+                <span className={styles.modelPillIcon}>{selectedModel!.icon}</span>
+                <span className={styles.modelPillName}>{selectedModel!.name}</span>
+                <span style={{ fontSize: 9, color: '#475569' }}>▼</span>
+              </div>
+              <div className={`${styles.modelDropdown} ${dropdownOpen ? styles.modelDropdownOpen : ''}`}>
+                {MODELS.map(m => (
+                  <div key={m.id} className={`${styles.modelOption} ${m.id === selectedModel!.id ? styles.modelOptionSelected : ''}`}
+                    onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}>
+                    <div className={styles.modelOptionLeft}>
+                      <span style={{ fontSize: 16 }}>{m.icon}</span>
+                      <div>
+                        <div className={styles.modelOptionName}>{m.name}</div>
+                        <div className={styles.modelOptionDesc}>{m.desc}</div>
+                      </div>
+                    </div>
+                    <span className={styles.modelOptionPrice}>{m.price}</span>
+                    <span className={styles.modelOptionCheck}>✓</span>
+                  </div>
+                ))}
+              </div>
             </div>
+
             {['时长', '分辨率'].map((label) => (
               <div key={label} style={{ display: 'flex', gap: 4 }}>
                 {label === '时长' && DURATIONS.map((d, di) => (
@@ -192,24 +190,37 @@ export default function VideoPage() {
                 <span className={styles.chipLabel}>镜头</span><span className={styles.chipDiv}>·</span><span>{c}</span>
               </button>
             ))}
+
+            {/* Reference image upload chip */}
+            <button
+              className={`${styles.chip} ${styles.refChip} ${initImage ? styles.chipActive : ''}`}
+              title="上传参考图"
+              onClick={() => setShowRefUpload(true)}
+            >
+              📷
+            </button>
           </div>
 
           <div className={styles.coreUnit}>
             <div className={styles.promptBox}>
               <textarea className={styles.promptTextarea}
-                placeholder={mode === 'img2vid' ? '描述你想要的视频运动效果… 例如：镜头向前推进，场景缓慢变化' : '描述你想要的视频场景… 例如：无人机穿越峡谷，极速飞行体验'}
+                placeholder={PLACEHOLDER}
                 value={prompt} onChange={e => setPrompt(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleGenerate(); }}
               />
-              <div className={styles.promptFooter}><span /><span className={styles.charCount}>{prompt.length} / 1000</span></div>
+              <div className={styles.promptFooter}>
+                <span />
+                <span className={styles.charCount}>{prompt.length} / 1000</span>
+              </div>
             </div>
             <button className={styles.generateBtn} onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim() || (mode === 'img2vid' && !initImage)}>
-              {isGenerating ? <><span className={styles.spinner} /> 生成中…</> : mode === 'img2vid' ? '🎬 图生视频' : '🎬 开始生成'}
+              disabled={isGenerating || !prompt.trim()}>
+              {isGenerating ? <><span className={styles.spinner} /> 生成中…</> : '🎬 开始生成'}
             </button>
           </div>
           <p className={styles.balanceHint}>
-            {mode === 'img2vid' ? '💡 图生视频效果更可控' : '余额 <strong>¥4.84</strong> · 预估 ¥'}{[5,10,15][duration]! * 1.5}
+            💡 已启用参考图 {initImage && '✓'}
+            {' · '}余额 <strong>¥4.84</strong> · 预估 ¥{[5,10,15][duration]! * 1.5}
           </p>
         </aside>
 
@@ -249,6 +260,63 @@ export default function VideoPage() {
           </div>
         </main>
       </div>
+
+      {/* Reference image upload popup */}
+      {showRefUpload && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9998 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRefUpload(false); }}
+        >
+          <div style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 24, width: 340, maxWidth: '90vw' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, margin: 0 }}>📷 参考图（可选）</h3>
+              <button onClick={() => setShowRefUpload(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18 }}>✕</button>
+            </div>
+
+            {initImage ? (
+              <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+                <img src={initImage} alt="参考图" style={{ width: '100%', borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', maxHeight: 200, objectFit: 'cover' }} />
+                <button
+                  onClick={() => setInitImage('')}
+                  style={{ position: 'absolute', top: -8, right: -8, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', fontSize: 12 }}
+                >✕</button>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                style={{ border: '2px dashed rgba(255,255,255,0.15)', borderRadius: 12, padding: 28, textAlign: 'center', cursor: 'pointer', color: '#64748b', transition: 'all 0.2s' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = '#6366f1'; (e.currentTarget as HTMLDivElement).style.background = 'rgba(99,102,241,0.05)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.15)'; (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
+              >
+                {uploading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 24, height: 24, border: '2px solid rgba(99,102,241,0.3)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: 13 }}>上传中...</span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 28 }}>📷</span>
+                    <span style={{ fontSize: 13, color: '#64748b' }}>点击上传 / 拖拽图片</span>
+                    <span style={{ fontSize: 11, color: '#475569' }}>支持 JPG/PNG，建议 16:9</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+
+            <p style={{ color: '#475569', fontSize: 12, marginTop: 12, marginBottom: 16, textAlign: 'center' }}>
+              参考图用于图生视频，让 AI 理解你想要的画面风格和构图
+            </p>
+            <button
+              onClick={() => setShowRefUpload(false)}
+              style={{ width: '100%', padding: '10px', borderRadius: 8, background: '#6366f1', color: '#fff', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            >
+              确认
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { useAuth } from '@/contexts/auth-context';
 import { LoginModal } from './login-modal';
@@ -12,6 +13,7 @@ export function SiteHeader() {
   const t = useTranslations('nav');
   const tDashboard = useTranslations('dashboard');
   const locale = useLocale();
+  const pathname = usePathname();
   const L = (path: string) => `/${locale}${path}`;
   const [showLogin, setShowLogin] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -50,22 +52,28 @@ export function SiteHeader() {
           {/* Nav */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {[
+              { href: L('/'), label: t('home') || '首页' },
               { href: L('/image'), label: t('image') },
               { href: L('/video'), label: t('video') },
               { href: L('/audio'), label: t('audio') },
-            ].map((item) => (
+            ].map((item) => {
+              const isActive = pathname === item.href;
+              return (
               <Link
                 key={item.href}
                 href={item.href}
                 style={{
                   padding: '6px 14px', borderRadius: 8,
-                  color: '#94a3b8', fontSize: 14, textDecoration: 'none',
+                  color: isActive ? '#a5b4fc' : '#94a3b8',
+                  background: isActive ? 'rgba(99,102,241,0.1)' : 'transparent',
+                  fontSize: 14, textDecoration: 'none',
                   transition: 'all 0.2s',
                 }}
               >
                 {item.label}
               </Link>
-            ))}
+            );
+            })};
 
             {/* Language Switcher */}
             <LanguageSwitcher />

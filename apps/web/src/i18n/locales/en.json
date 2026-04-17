@@ -1,5 +1,6 @@
 {
   "nav": {
+    "home": "Home",
     "image": "Image Generation",
     "video": "Video Generation",
     "audio": "Audio Generation",
