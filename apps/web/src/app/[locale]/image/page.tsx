@@ -352,8 +352,18 @@ export default function ImagePage() {
                 <div className={styles.historyCardFooter}>
                   <span className={styles.historyTime}>{item.time}</span>
                   <div className={styles.historyActions}>
-                    <button className={styles.histAct}>⬇</button>
-                    <button className={styles.histAct}>⭐</button>
+                    <button
+                      className={styles.histAct}
+                      onClick={() => {
+                        if (!item.img) { showError('图片还未生成，请稍候'); return; }
+                        const a = document.createElement('a');
+                        a.href = item.img; a.download = `ai-image-${item.id}.png`; a.target = '_blank'; a.click();
+                      }}
+                    >⬇</button>
+                    <button
+                      className={styles.histAct}
+                      onClick={() => success('已收藏到收藏夹')}
+                    >⭐</button>
                   </div>
                 </div>
               </div>

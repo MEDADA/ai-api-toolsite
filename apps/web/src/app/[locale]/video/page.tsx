@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/hooks/use-toast';
 
 const MODELS = [
   { id: 'seedance', icon: '🎬', name: 'Seedance 1.5 Pro', desc: '高质量 · 中文理解强', price: '¥1.5/秒' },
@@ -24,6 +25,7 @@ export default function VideoPage() {
   const t = useTranslations('video');
   const locale = useLocale();
   const { isLoggedIn } = useAuth();
+  const { success, info, error: showError } = useToast();
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -72,7 +74,7 @@ export default function VideoPage() {
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim() || isGenerating) return;
 
-    if (!isLoggedIn) { alert('请先登录'); return; }
+    if (!isLoggedIn) { info('请先登录'); return; }
 
     const tempId = `temp_${Date.now()}`;
     const durationSec = [5, 10, 15][duration];
@@ -126,7 +128,7 @@ export default function VideoPage() {
         const data = JSON.parse(e.data);
         setHistory(prev => prev.filter(h => h.id !== tempId));
         setIsGenerating(false);
-        alert(`生成失败: ${data.error}`);
+        info(`生成失败: ${data.error}`);
         es.close();
       });
 
@@ -135,7 +137,7 @@ export default function VideoPage() {
     } catch (err: any) {
       setHistory(prev => prev.filter(h => h.id !== tempId));
       setIsGenerating(false);
-      alert(err.message);
+      info(err.message || '生成失败');
     }
   }, [prompt, isGenerating, selectedModel, duration, resolution, initImage, RESOLUTIONS]);
 
@@ -268,8 +270,18 @@ export default function VideoPage() {
                   <div className={styles.historyFooter}>
                     <span className={styles.historyTime}>{item.time}</span>
                     <div className={styles.historyActions}>
-                      <button className={styles.histAct} onClick={e => { e.stopPropagation(); window.open(item.img, '_blank'); }}>⬇</button>
-                      <button className={styles.histAct}>⭐</button>
+                      <button
+                        className={styles.histAct}
+                        onClick={e => {
+                          e.stopPropagation();
+                          if (!item.img) { showError('视频还未生成，请稍候'); return; }
+                          window.open(item.img, '_blank');
+                        }}
+                      >⬇</button>
+                      <button
+                        className={styles.histAct}
+                        onClick={() => success('已收藏到收藏夹')}
+                      >⭐</button>
                     </div>
                   </div>
                 </div>

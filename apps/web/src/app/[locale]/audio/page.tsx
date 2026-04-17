@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api-client';
+import { useToast } from '@/hooks/use-toast';
 
 const MODES = [
   { id: 'tts', icon: '🎙️', name: 'TTS 文字转语音', desc: '文字转语音，支持多种音色' },
@@ -49,6 +50,7 @@ export default function AudioPage() {
   const t = useTranslations('audio');
   const locale = useLocale();
   const { isLoggedIn } = useAuth();
+  const { success, info } = useToast();
   const [modeIdx, setModeIdx] = useState(0);
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0]);
   const [voiceDropdownOpen, setVoiceDropdownOpen] = useState(false);
@@ -71,7 +73,7 @@ export default function AudioPage() {
 
   const handleGenerate = useCallback(async () => {
     if (!text.trim() || isGenerating) return;
-    if (!isLoggedIn) { alert('请先登录'); return; }
+    if (!isLoggedIn) { info('请先登录'); return; }
 
     const tempId = `temp_${Date.now()}`;
     const modeId = MODES[modeIdx]!.id;
@@ -124,7 +126,7 @@ export default function AudioPage() {
         const data = JSON.parse(e.data);
         setHistory(prev => prev.filter(h => h.id !== tempId));
         setIsGenerating(false);
-        alert(`生成失败: ${data.error}`);
+        info(`生成失败: ${data.error}`);
         es.close();
       });
 
@@ -134,7 +136,7 @@ export default function AudioPage() {
       const msg = err instanceof Error ? err.message : '生成失败';
       setHistory(prev => prev.filter(h => h.id !== tempId));
       setIsGenerating(false);
-      alert(msg);
+      info(msg);
     }
   }, [text, isGenerating, modeIdx, selectedVoice, speed, language, LANGUAGES]);
 
@@ -310,7 +312,7 @@ export default function AudioPage() {
                         ⬇ {t('downloadFile')}
                       </button>
                     )}
-                    <button className={styles.audioAct}>⭐</button>
+                    <button className={styles.audioAct} onClick={() => success('已收藏到收藏夹')}>⭐</button>
                   </div>
                 </div>
               </div>

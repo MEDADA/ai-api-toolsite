@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useTranslations } from 'next-intl';
+import { useToast } from '@/hooks/use-toast';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -14,6 +15,7 @@ type PhoneMode = 'code' | 'password' | 'register';
 export function LoginModal({ onClose }: LoginModalProps) {
   const { login, loginByPassword, registerByPhone, sendCode } = useAuth();
   const t = useTranslations('login');
+  const { info } = useToast();
 
   const [activeTab, setActiveTab] = useState<Tab>('phone');
   const [phoneMode, setPhoneMode] = useState<PhoneMode>('code');
@@ -188,11 +190,11 @@ export function LoginModal({ onClose }: LoginModalProps) {
   };
 
   const handleEmailLogin = () => {
-    alert('邮箱登录功能即将上线');
+    info('邮箱登录功能即将上线');
   };
 
   const handleOAuthLogin = (provider: string) => {
-    alert(`${provider} 登录功能即将上线`);
+    info(`${provider} 登录功能即将上线`);
   };
 
   // ─── Styles ───────────────────────────────────────────────────────────────
@@ -541,10 +543,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
       )}
       <button
         style={ghostBtn}
-        disabled={countdown > 0}
+        disabled={loading || countdown > 0}
         onClick={handleSendCode}
       >
-        {countdown > 0
+        {loading ? t('resendAfter', { seconds: '…' }) : countdown > 0
           ? t('resendAfter', { seconds: countdown.toString() })
           : t('resendCode')}
       </button>
