@@ -244,6 +244,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
     gap: 2,
   };
 
+  const tabClass = (key: Tab) => activeTab === key ? 'login-modal-tab login-modal-tab-active' : 'login-modal-tab';
   const tab = (key: Tab): React.CSSProperties => ({
     flex: 1,
     padding: '8px 4px',
@@ -482,10 +483,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
         </button>
       </div>
 
-      <h2 style={sectionTitle}>{t('titlePhone')}</h2>
+      <h2 className="login-modal-section-title" style={sectionTitle}>{t('titlePhone')}</h2>
       <p style={sectionSub}>{t('promoText')}</p>
 
-      <div style={fieldWrap('phone')}>
+      <div className="login-field-wrap" style={fieldWrap('phone')}>
         <label style={label}>{t('labelPhone')}</label>
         <input
           type="tel"
@@ -498,7 +499,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           style={inputStyle('phone')}
         />
       </div>
-      <div style={fieldWrap('code')}>
+      <div className="login-field-wrap" style={fieldWrap('code')}>
         <label style={label}>验证码</label>
         <input
           type="text"
@@ -552,10 +553,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
         </button>
       </div>
 
-      <h2 style={sectionTitle}>{t('passwordLogin')}</h2>
+      <h2 className="login-modal-section-title" style={sectionTitle}>{t('passwordLogin')}</h2>
       <p style={sectionSub}>{t('passwordLoginSubtitle') || '使用密码登录您的账号'}</p>
 
-      <div style={fieldWrap('phone')}>
+      <div className="login-field-wrap" style={fieldWrap('phone')}>
         <label style={label}>{t('labelPhone')}</label>
         <input
           type="tel"
@@ -569,7 +570,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         />
       </div>
 
-      <div style={fieldWrap('password')}>
+      <div className="login-field-wrap" style={fieldWrap('password')}>
         <label style={label}>{t('labelPassword')}</label>
         <div style={passwordInputWrap}>
           <input
@@ -626,10 +627,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
         </button>
       </div>
 
-      <h2 style={sectionTitle}>{t('registerTitle')}</h2>
+      <h2 className="login-modal-section-title" style={sectionTitle}>{t('registerTitle')}</h2>
       <p style={sectionSub}>{t('registerSubtitle') || '设置密码保护您的账号安全'}</p>
 
-      <div style={fieldWrap('phone')}>
+      <div className="login-field-wrap" style={fieldWrap('phone')}>
         <label style={label}>{t('labelPhone')}</label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
@@ -677,7 +678,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         </button>
       </div>
 
-      <div style={fieldWrap('password')}>
+      <div className="login-field-wrap" style={fieldWrap('password')}>
         <label style={label}>{t('setPasswordLabel') || '设置密码'}</label>
         <div style={passwordInputWrap}>
           <input
@@ -702,7 +703,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         </div>
       </div>
 
-      <div style={fieldWrap('confirmPassword')}>
+      <div className="login-field-wrap" style={fieldWrap('confirmPassword')}>
         <label style={label}>{t('confirmPasswordLabel') || '确认密码'}</label>
         <div style={passwordInputWrap}>
           <input
@@ -756,9 +757,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
   const renderEmailLogin = () => (
     <>
-      <h2 style={sectionTitle}>{t('titleEmail')}</h2>
+      <h2 className="login-modal-section-title" style={sectionTitle}>{t('titleEmail')}</h2>
       <p style={sectionSub}>{t('emailSubtitle')}</p>
-      <div style={fieldWrap('email')}>
+      <div className="login-field-wrap" style={fieldWrap('email')}>
         <label style={label}>{t('labelEmail')}</label>
         <input
           type="email"
@@ -768,7 +769,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           style={inputStyle('email')}
         />
       </div>
-      <div style={fieldWrap('password')}>
+      <div className="login-field-wrap" style={fieldWrap('password')}>
         <label style={label}>{t('labelPassword')}</label>
         <div style={passwordInputWrap}>
           <input
@@ -802,7 +803,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
   const renderGoogleLogin = () => (
     <>
-      <h2 style={sectionTitle}>{t('titleOAuth')}</h2>
+      <h2 className="login-modal-section-title" style={sectionTitle}>{t('titleOAuth')}</h2>
       <p style={sectionSub}>{t('googleSubtitle')}</p>
       <button
         style={oauthBtn('google')}
@@ -839,7 +840,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
   const renderAppleLogin = () => (
     <>
-      <h2 style={sectionTitle}>{t('titleOAuth')}</h2>
+      <h2 className="login-modal-section-title" style={sectionTitle}>{t('titleOAuth')}</h2>
       <p style={sectionSub}>{t('appleSubtitle')}</p>
       <button
         style={{ ...oauthBtn('apple'), margin: 0 }}
@@ -901,7 +902,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           if (e.target === e.currentTarget && !showBonus) onClose();
         }}
       >
-        <div style={card}>
+        <div className="login-modal-card" style={card}>
 
           {/* Close button */}
           {!showBonus && (
@@ -925,6 +926,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           {/* Bonus banner */}
           {showBonus && (
             <div
+              className="login-modal-bonus"
               style={{
                 ...bonusBanner,
                 animation: 'bonusIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), pulse-glow 2.5s ease infinite',
@@ -965,10 +967,11 @@ export function LoginModal({ onClose }: LoginModalProps) {
           )}
 
           {/* Tab switcher */}
-          <div style={tabBar}>
+          <div className="login-modal-tabs" style={tabBar}>
             {TABS.map(tb => (
               <button
                 key={tb.key}
+                className={tabClass(tb.key)}
                 style={tab(tb.key)}
                 onClick={() => {
                   setActiveTab(tb.key);

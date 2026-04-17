@@ -295,11 +295,119 @@
 
 /* Mobile */
 @media (max-width: 768px) {
-  .layout { flex-direction: column; }
-  .leftPanel { width: 100%; max-width: 100%; height: auto; }
-  .rightPanel { height: calc(100vh - 56px); }
-  .historyGrid { columns: 2; }
+  .layout {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 56px);
+    padding-bottom: 80px;
+  }
+
+  /* Mobile toggle button */
+  .historyToggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: calc(100% - 32px);
+    margin: 12px 16px 0;
+    padding: 10px 16px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 10px;
+    color: #a5b4fc;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  /* Left panel: full width */
+  .leftPanel {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    padding: 12px 16px 16px;
+  }
+
+  /* Top bar: allow horizontal scroll */
+  .topBar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .topBar::-webkit-scrollbar { display: none; }
+
+  /* Right panel: hidden by default on mobile */
+  .rightPanel {
+    display: none;
+    width: 100%;
+    height: auto;
+    min-height: 60vh;
+    padding: 12px 16px;
+  }
+  .rightPanelOpen {
+    display: block;
+  }
+
+  /* History grid: 2 columns on mobile */
+  .historyGrid {
+    columns: 2;
+    column-gap: 8px;
+  }
+  .historyCard {
+    margin-bottom: 8px;
+  }
+
+  /* Generate button: fixed at bottom */
+  .generateBtn {
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    z-index: 100;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 4px 24px rgba(99, 102, 241, 0.5) !important;
+  }
+
+  /* Audio green variant */
+  .generateBtnGreen {
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    z-index: 100;
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 0 4px 24px rgba(52, 211, 153, 0.45) !important;
+  }
+
+  /* Prompt textarea: slightly larger for mobile */
+  .promptTextarea {
+    font-size: 15px;
+    min-height: 120px;
+  }
+
+  /* Core unit: add bottom padding for fixed button */
+  .coreUnit {
+    padding-bottom: 4px;
+  }
+
+  /* Balance hint: show above fixed button */
+  .balanceHint {
+    padding-bottom: 70px;
+  }
+
+  /* Prompt box + generate button: not rounded at bottom since button is fixed */
+  .promptBox {
+    border-radius: 12px 12px 0 0;
+  }
 }
+
 
 /* ── Audio Page Styles ── */
 .filterBtnActive.audioGreen { border-color: rgba(52,211,153,0.4); color: #34d399; background: rgba(52,211,153,0.08); }

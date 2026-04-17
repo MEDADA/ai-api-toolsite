@@ -55,3 +55,56 @@ select {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* ============================================================
+   Mobile Responsive — Header & Login Modal
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Header: compact padding */
+  .site-header-container {
+    padding: 0 12px !important;
+  }
+  .site-header-nav a {
+    padding: 6px 8px !important;
+    font-size: 13px !important;
+  }
+  .site-header-nav {
+    gap: 2px !important;
+  }
+  .site-header-auth-btn {
+    padding: 6px 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Login Modal: 90vw card */
+  .login-modal-card {
+    width: 90vw !important;
+    max-width: 90vw !important;
+    padding: 24px 16px !important;
+    border-radius: 16px !important;
+  }
+  .login-modal-tabs {
+    gap: 0 !important;
+  }
+  .login-modal-tab {
+    font-size: 11px !important;
+    padding: 7px 2px !important;
+  }
+  .login-modal-section-title {
+    font-size: 15px !important;
+  }
+  .login-modal-bonus {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+  /* Login field wrap: full width inputs */
+  .login-field-wrap {
+    margin-bottom: 12px !important;
+  }
+  .login-field-wrap input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+

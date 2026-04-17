@@ -41,6 +41,7 @@ export function SiteHeader() {
         }}
       >
         <div
+          className="site-header-container"
           style={{
             maxWidth: 1100, margin: '0 auto', padding: '0 20px',
             height: 60, display: 'flex', alignItems: 'center',
@@ -60,7 +61,7 @@ export function SiteHeader() {
           </Link>
 
           {/* Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <nav className="site-header-nav" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {[
               { href: L('/'), label: t('home') || '首页' },
               { href: L('/image'), label: t('image') },
@@ -93,6 +94,7 @@ export function SiteHeader() {
             {isLoggedIn ? (
               <div style={{ position: 'relative', marginLeft: 12 }}>
                 <button
+                  className="site-header-auth-btn"
                   onClick={() => setShowDropdown((v) => !v)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,

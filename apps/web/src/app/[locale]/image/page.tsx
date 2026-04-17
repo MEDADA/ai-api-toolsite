@@ -51,7 +51,7 @@ const MODELS = [
   },
 ];
 
-const SIZES = ['512', '768', '1024', '576x1024'];
+const SIZES = ['1024x1024', '2048x2048', '1728x2304', '2304x1728', '1600x2848', '2848x1600'];
 const SIZE_LABELS = ['512²', '768²', '1024²', '9:16'];
 const QUALITIES = ['fast', 'standard', 'high'];
 const QUALITY_LABELS = ['⚡快速', '✨标准', '🔥高质量'];
@@ -85,6 +85,7 @@ export default function ImagePage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filter, setFilter] = useState('all');
   const [genProgress, setGenProgress] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
@@ -111,8 +112,8 @@ export default function ImagePage() {
     eventSourceRef.current?.close();
 
     const taskId = `img-${Date.now()}`;
-    const size = SIZES[selectedSize] ?? '1024';
-    const isPortrait = size === '576x1024';
+    const size = SIZES[selectedSize] ?? '2048x2048';
+    const [w, h] = size.split('x');
     const quality: 'fast' | 'standard' | 'high' = (QUALITIES[selectedQuality] ?? 'standard') as 'fast' | 'standard' | 'high';
 
     try {
@@ -120,8 +121,8 @@ export default function ImagePage() {
         model_slug: selectedModel.id,
         idem_key: taskId,
         prompt,
-        width: isPortrait ? '576' : size,
-        height: isPortrait ? '1024' : size,
+        width: w,
+        height: h,
         num_inference_steps: quality,
         image_count: COUNTS[selectedCount] ?? 1,
       });
@@ -195,6 +196,14 @@ export default function ImagePage() {
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
       <SiteHeader />
+      {/* Mobile: history toggle button */}
+      <button
+        className={styles.historyToggle}
+        onClick={() => setHistoryOpen(v => !v)}
+      >
+        📋 {historyOpen ? t('resultHistory') + ' ▲' : t('resultHistory') + ' ▼'}
+      </button>
+
       <div className={styles.layout}>
 
         {/* ── Left Panel ── */}
@@ -304,7 +313,7 @@ export default function ImagePage() {
         </aside>
 
         {/* ── Right Panel: History ── */}
-        <main className={styles.rightPanel}>
+        <main className={`${styles.rightPanel} ${historyOpen ? styles.rightPanelOpen : ''}`}>
           <div className={styles.historyTopbar}>
             <div>
               <span className={styles.historyHeading}>{t('resultHistory')}</span>
