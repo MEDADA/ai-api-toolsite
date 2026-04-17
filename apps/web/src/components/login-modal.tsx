@@ -380,7 +380,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
   const codeInput: React.CSSProperties = {
     ...inputStyle('code'),
-    fontSize: 26,
+    fontSize: 18,
     textAlign: 'center',
     letterSpacing: 12,
     padding: '14px 16px 14px 14px',
