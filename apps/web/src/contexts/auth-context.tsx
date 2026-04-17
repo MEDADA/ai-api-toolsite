@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendCode = useCallback(async (phone: string) => {
-    return await apiClient.auth.sendCode(phone);
+    await apiClient.auth.sendCode(phone);
   }, []);
 
   const logout = useCallback(() => {

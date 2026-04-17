@@ -4,44 +4,53 @@ import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useTranslations, useLocale } from 'next-intl';
 import { useState, useRef, useEffect } from 'react';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/contexts/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import type { SSECompleted, SSEFailed, SSEProgress, SSETaskQueued } from '@/lib/shared-types';
 
 const MODELS = [
-  { id: 'flux-schnell', icon: '⚡', name: 'FLUX.2 schnell', desc: '快速 · 写实/动漫', price: '¥0.5/张' },
-  { id: 'wanxiang-26', icon: '🔥', name: '万相 2.6', desc: '高质量 · 中文理解强', price: '¥0.5/张' },
-  { id: 'flux-dev', icon: '✨', name: 'FLUX.2 dev', desc: '顶配 · 细节极致', price: '¥1.2/张' },
+  { id: 'flux-2-schnell', icon: '⚡', name: 'FLUX.2 schnell', desc: '快速 · 写实/动漫', price: '¥0.5/张' },
+  { id: 'wanxiang-2-6', icon: '🔥', name: '万相 2.6', desc: '高质量 · 中文理解强', price: '¥0.5/张' },
+  { id: 'flux-2-dev', icon: '✨', name: 'FLUX.2 dev', desc: '顶配 · 细节极致', price: '¥1.2/张' },
 ];
 
-const SIZES = ['512²', '768²', '1024²', '9:16'];
-const QUALITIES = ['⚡快速', '✨标准', '🔥高质量'];
-const COUNTS = ['1张', '2张', '4张'];
+const SIZES = ['512', '768', '1024', '576x1024'];
+const SIZE_LABELS = ['512²', '768²', '1024²', '9:16'];
+const QUALITIES = ['fast', 'standard', 'high'];
+const QUALITY_LABELS = ['⚡快速', '✨标准', '🔥高质量'];
+const COUNTS = [1, 2, 4];
+const COUNT_LABELS = ['1张', '2张', '4张'];
 
-const HISTORY_ITEMS = [
-  { id: '1', model: 'FLUX.2 schnell · 1024²', prompt: '一只穿着宇航服的橘猫，在月球表面仰望地球，赛博朋克风格', time: '刚刚', img: 'https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?w=500&q=75', tag: '图片' },
-  { id: '2', model: '万相 2.6 · 1024²', prompt: '未来城市夜景，霓虹灯光', time: '2 分钟前', img: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=500&q=75', tag: '图片' },
-  { id: '3', model: 'FLUX.2 dev · 512²', prompt: '渐变抽象艺术', time: '5 分钟前', img: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=500&q=75', tag: '图片' },
-  { id: '4', model: '万相 2.6 · 9:16', prompt: '油画风格，日落海景', time: '8 分钟前', img: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&q=75', tag: '图片' },
-  { id: '5', model: 'FLUX.2 schnell · 512²', prompt: '极简黑白建筑', time: '12 分钟前', img: 'https://images.unsplash.com/photo-1614850715649-1d0106293bd1?w=500&q=75', tag: '图片' },
-  { id: '6', model: 'FLUX.2 dev · 1024²', prompt: 'AI 神经网络可视化', time: '20 分钟前', img: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=500&q=75', tag: '图片' },
-];
-
-const PLACEHOLDER = '';
+interface HistoryItem {
+  id: string;
+  model: string;
+  prompt: string;
+  time: string;
+  img: string;
+  tag: string;
+}
 
 export default function ImagePage() {
   const t = useTranslations('image');
   const tf = useTranslations('footer');
   const locale = useLocale();
+  const { isLoggedIn, balance, refetchBalance } = useAuth();
+  const { success, error: showError } = useToast();
   const L = (path: string) => `/${locale}${path}`;
 
-  const [selectedModel, setSelectedModel] = useState(MODELS[0]);
+  const [selectedModel, setSelectedModel] = useState(MODELS[0]!);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [selectedSize, setSelectedSize] = useState(2);
   const [selectedQuality, setSelectedQuality] = useState(1);
   const [selectedCount, setSelectedCount] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [history, setHistory] = useState(HISTORY_ITEMS);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filter, setFilter] = useState('all');
+  const [genProgress, setGenProgress] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -55,11 +64,94 @@ export default function ImagePage() {
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
-    setIsGenerating(true);
 
-    // TODO: connect to real API
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    setIsGenerating(false);
+    if (!isLoggedIn) {
+      showError(t('loginToGenerate'));
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenProgress('');
+    eventSourceRef.current?.close();
+
+    const taskId = `img-${Date.now()}`;
+    const size = SIZES[selectedSize] ?? '1024';
+    const isPortrait = size === '576x1024';
+    const quality: 'fast' | 'standard' | 'high' = (QUALITIES[selectedQuality] ?? 'standard') as 'fast' | 'standard' | 'high';
+
+    try {
+      const result = await apiClient.tasks.create({
+        model_slug: selectedModel.id,
+        idem_key: taskId,
+        prompt,
+        width: isPortrait ? '576' : size,
+        height: isPortrait ? '1024' : size,
+        num_inference_steps: quality,
+        image_count: COUNTS[selectedCount] ?? 1,
+      });
+
+      const tid = result.task_id;
+
+      // Connect to SSE stream
+      const es = apiClient.tasks.getStream(tid);
+      eventSourceRef.current = es;
+
+      es.onmessage = (e) => {
+        try {
+          const parsed = JSON.parse(e.data) as { type: string; data: unknown };
+          if (parsed.type === 'queued') {
+            const d = parsed.data as SSETaskQueued;
+            setGenProgress(t('queuedMsg', { position: d.position?.toString() ?? '?' }));
+          } else if (parsed.type === 'started') {
+            setGenProgress(t('startedMsg'));
+          } else if (parsed.type === 'progress') {
+            const d = parsed.data as SSEProgress;
+            setGenProgress(t('progressMsg', { progress: d.progress.toString() }));
+          } else if (parsed.type === 'completed') {
+            const d = parsed.data as SSECompleted;
+            const newItems: HistoryItem[] = d.outputs.map((o, i) => ({
+              id: `${tid}-${i}`,
+              model: `${selectedModel.name} · ${size}`,
+              prompt,
+              time: '刚刚',
+              img: o.url,
+              tag: '图片',
+            }));
+            setHistory(prev => [...newItems, ...prev]);
+            success(t('successImage'));
+            refetchBalance();
+            es.close();
+            setIsGenerating(false);
+            setGenProgress('');
+          } else if (parsed.type === 'failed') {
+            const d = parsed.data as SSEFailed;
+            showError(t('taskFailed') + (d.error ? `: ${d.error}` : ''));
+            es.close();
+            setIsGenerating(false);
+            setGenProgress('');
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      es.onerror = () => {
+        es.close();
+        setIsGenerating(false);
+        setGenProgress('');
+      };
+    } catch (err) {
+      const e = err as { message?: string; code?: string };
+      if (e.code === 'UNAUTHORIZED') {
+        showError(t('loginToGenerate'));
+      } else if (e.code === 'INSUFFICIENT_BALANCE') {
+        showError(t('balance') + ' ⚠️');
+      } else {
+        showError(e.message ?? t('error'));
+      }
+      setIsGenerating(false);
+      setGenProgress('');
+    }
   };
 
   const filtered = filter === 'all' ? history : history.filter(h => h.tag === filter);
@@ -100,7 +192,7 @@ export default function ImagePage() {
 
             {[t('size'), t('quality'), t('count')].map((label, i) => (
               <div key={label} style={{ display: 'flex', gap: 4 }}>
-                {i === 0 && SIZES.map((s, si) => (
+                {i === 0 && SIZE_LABELS.map((s, si) => (
                   <button key={s} className={`${styles.chip} ${si === selectedSize ? styles.chipActive : ''}`}
                     onClick={() => setSelectedSize(si)}>
                     <span className={styles.chipLabel}>{label}</span>
@@ -108,7 +200,7 @@ export default function ImagePage() {
                     <span>{s}</span>
                   </button>
                 ))}
-                {i === 1 && QUALITIES.map((q, qi) => (
+                {i === 1 && QUALITY_LABELS.map((q, qi) => (
                   <button key={q} className={`${styles.chip} ${qi === selectedQuality ? styles.chipActive : ''}`}
                     onClick={() => setSelectedQuality(qi)}>
                     <span className={styles.chipLabel}>{label}</span>
@@ -116,7 +208,7 @@ export default function ImagePage() {
                     <span>{q}</span>
                   </button>
                 ))}
-                {i === 2 && COUNTS.map((c, ci) => (
+                {i === 2 && COUNT_LABELS.map((c, ci) => (
                   <button key={c} className={`${styles.chip} ${ci === selectedCount ? styles.chipActive : ''}`}
                     onClick={() => setSelectedCount(ci)}>
                     <span className={styles.chipLabel}>{label}</span>
@@ -152,13 +244,16 @@ export default function ImagePage() {
             >
               {isGenerating ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <span className={styles.spinner} /> {t('generating')}
+                  <span className={styles.spinner} /> {genProgress || t('generating')}
                 </span>
               ) : '🎨 ' + t('generate')}
             </button>
           </div>
 
-          <p className={styles.balanceHint}>{t('balance')} <strong>¥9.50</strong> · {t('estimate')} ¥0.50</p>
+          <p className={styles.balanceHint}>
+            {t('balance')} <strong>¥{balance ? (balance.available / 100).toFixed(2) : '--'}</strong>
+            {isLoggedIn ? '' : ' · ' + t('loginToGenerate')}
+          </p>
         </aside>
 
         {/* ── Right Panel: History ── */}
