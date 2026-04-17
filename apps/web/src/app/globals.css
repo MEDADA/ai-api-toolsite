@@ -65,8 +65,8 @@ select {
     padding: 0 12px !important;
   }
   .site-header-nav a {
-    padding: 6px 8px !important;
-    font-size: 13px !important;
+    padding: 5px 6px !important;
+    font-size: 11px !important;
   }
   .site-header-nav {
     gap: 2px !important;

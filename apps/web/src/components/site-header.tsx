@@ -117,7 +117,7 @@ export function SiteHeader() {
                   {/* Balance */}
                   {balanceYuan !== null && (
                     <span style={{ fontSize: 13, color: '#f59e0b', fontWeight: 600 }}>
-                      ¥{balanceYuan.toFixed(0)}
+                      ¥{balanceYuan.toFixed(2)}
                     </span>
                   )}
 
