@@ -37,6 +37,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [btnHover, setBtnHover] = useState(false);
   const [oauthHover, setOAuthHover] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -56,6 +57,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
     setPassword('');
     setConfirmPassword('');
     setCountdown(0);
+    setErrorMsg('');
   };
 
   // ─── Send code ────────────────────────────────────────────────────────────
@@ -77,7 +79,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
       }, 1000);
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; _response?: { reason?: string } };
-      error(err.code || err.message || t('sendFailed'));
+      const msg = err.code || err.message || t('sendFailed');
+      setErrorMsg(msg);
+      error(msg);
     } finally {
       setLoading(false);
     }
@@ -89,6 +93,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       error(t('invalidCode'));
       return;
     }
+    setErrorMsg('');
     setLoading(true);
     try {
       await login(phone, code);
@@ -98,11 +103,12 @@ export function LoginModal({ onClose }: LoginModalProps) {
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; status?: number; _response?: { reason?: string } };
       // 401 = invalid or expired code; 400 = other validation error
+      let msg = err.code || err.message || t('loginFailed');
       if (err.code === 'INVALID_CODE' || err.status === 401) {
-        error(t('invalidCode'));
-      } else {
-        error(err.code || err.message || t('loginFailed'));
+        msg = t('invalidCode');
       }
+      setErrorMsg(msg);
+      error(msg);
     } finally {
       setLoading(false);
     }
@@ -118,6 +124,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       error(t('passwordPlaceholder'));
       return;
     }
+    setErrorMsg('');
     setLoading(true);
     try {
       await loginByPassword(phone, password);
@@ -127,13 +134,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; _response?: { reason?: string } };
       const reason = err.code || (err._response as { reason?: string })?.reason;
+      let msg = reason || err.message || t('loginFailed');
       if (reason === 'PHONE_NOT_FOUND') {
-        error(t('phoneRegistered'));
+        msg = t('phoneRegistered');
       } else if (reason === 'INVALID_PASSWORD') {
-        error(t('invalidPassword'));
-      } else {
-        error(reason || err.message || t('loginFailed'));
+        msg = t('invalidPassword');
       }
+      setErrorMsg(msg);
+      error(msg);
     } finally {
       setLoading(false);
     }
@@ -157,6 +165,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       error(t('confirmPasswordMismatch') || '两次密码输入不一致');
       return;
     }
+    setErrorMsg('');
     setLoading(true);
     try {
       await registerByPhone(phone, code, password);
@@ -166,13 +175,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; _response?: { reason?: string } };
       const reason = err.code || (err._response as { reason?: string })?.reason;
+      let msg = reason || err.message || t('loginFailed');
       if (reason === 'PHONE_REGISTERED') {
-        error(t('phoneRegistered'));
+        msg = t('phoneRegistered');
       } else if (reason === 'INVALID_CODE') {
-        error(t('invalidCode'));
-      } else {
-        error(reason || err.message || t('loginFailed'));
+        msg = t('invalidCode');
       }
+      setErrorMsg(msg);
+      error(msg);
     } finally {
       setLoading(false);
     }
