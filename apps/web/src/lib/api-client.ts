@@ -87,9 +87,11 @@ class ApiClient {
     const json = (await response.json()) as { ok?: boolean; message?: string; code?: string; data?: T };
 
     if (!response.ok || json.ok === false) {
-      const err = new Error(json.message ?? `HTTP ${response.status}`) as Error & { code?: string; status?: number };
+      const err = new Error(json.message ?? `HTTP ${response.status}`) as Error & { code?: string; status?: number; _response?: unknown };
       if (json.code !== undefined) { err.code = json.code; }
       if (response.status !== undefined) { err.status = response.status; }
+      // Attach raw response body for consumers that need more details
+      err._response = json;
       throw err;
     }
 

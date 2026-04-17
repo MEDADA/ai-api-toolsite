@@ -76,8 +76,8 @@ export function LoginModal({ onClose }: LoginModalProps) {
         });
       }, 1000);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { reason?: string }; message?: string }; message?: string };
-      error(err.response?.data?.reason || err.response?.message || err.message || tToast('sendFailed'));
+      const err = e as { code?: string; message?: string; _response?: { reason?: string } };
+      error(err.code || err.message || tToast('sendFailed'));
     } finally {
       setLoading(false);
     }
@@ -96,8 +96,13 @@ export function LoginModal({ onClose }: LoginModalProps) {
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { reason?: string }; message?: string }; message?: string };
-      error(err.response?.data?.reason || err.response?.message || err.message || tToast('loginFailed'));
+      const err = e as { code?: string; message?: string; status?: number; _response?: { reason?: string } };
+      // 401 = invalid or expired code; 400 = other validation error
+      if (err.code === 'INVALID_CODE' || err.status === 401) {
+        error(tToast('invalidCode'));
+      } else {
+        error(err.code || err.message || tToast('loginFailed'));
+      }
     } finally {
       setLoading(false);
     }
@@ -120,14 +125,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { reason?: string }; message?: string }; message?: string };
-      const reason = err.response?.data?.reason;
+      const err = e as { code?: string; message?: string; _response?: { reason?: string } };
+      const reason = err.code || (err._response as { reason?: string })?.reason;
       if (reason === 'PHONE_NOT_FOUND') {
         error(t('phoneRegistered'));
       } else if (reason === 'INVALID_PASSWORD') {
         error(t('invalidPassword'));
       } else {
-        error(err.response?.data?.reason || err.response?.message || err.message || tToast('loginFailed'));
+        error(reason || err.message || tToast('loginFailed'));
       }
     } finally {
       setLoading(false);
@@ -159,14 +164,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { reason?: string }; message?: string }; message?: string };
-      const reason = err.response?.data?.reason;
+      const err = e as { code?: string; message?: string; _response?: { reason?: string } };
+      const reason = err.code || (err._response as { reason?: string })?.reason;
       if (reason === 'PHONE_REGISTERED') {
         error(t('phoneRegistered'));
       } else if (reason === 'INVALID_CODE') {
         error(tToast('invalidCode'));
       } else {
-        error(err.response?.data?.reason || err.response?.message || err.message || tToast('loginFailed'));
+        error(reason || err.message || tToast('loginFailed'));
       }
     } finally {
       setLoading(false);

@@ -77,8 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Schedule token refresh
   useEffect(() => {
     if (!token) return;
-    // Refresh 60 seconds before expiry (assume 7 days = 604800s)
-    const ms = (604800 - 60) * 1000;
+    // Refresh 60 seconds before expiry (actual expires_in from login/refresh response)
+    const expiresIn = parseInt(typeof localStorage !== 'undefined' ? (localStorage.getItem('token_expires_in') ?? '7200') : '7200', 10);
+    const ms = (expiresIn - 60) * 1000;
     refreshTimerRef.current = setTimeout(async () => {
       try {
         const refreshToken = typeof localStorage !== 'undefined' ? localStorage.getItem(REFRESH_KEY) : null;
@@ -90,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(newToken);
         localStorage.setItem(TOKEN_KEY, newToken);
         localStorage.setItem(REFRESH_KEY, newRefreshToken);
+        localStorage.setItem('token_expires_in', String(result.expires_in));
         // Reschedule
         const rt2 = localStorage.getItem(REFRESH_KEY);
         if (rt2) {
@@ -119,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem(TOKEN_KEY, newToken);
       localStorage.setItem(REFRESH_KEY, refreshToken);
       localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+      localStorage.setItem('token_expires_in', String(result.expires_in ?? 7200));
     }
 
     // Fetch balance after login
