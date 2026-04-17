@@ -1,7 +1,7 @@
 'use client';
 import styles from '../image/page.module.css';
 import { SiteHeader } from '@/components/site-header';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 const MODELS = [
@@ -19,6 +19,7 @@ interface HistoryItem {
 }
 
 export default function VideoPage() {
+  const t = useTranslations('video');
   const locale = useLocale();
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -171,14 +172,14 @@ export default function VideoPage() {
               </div>
             </div>
 
-            {['时长', '分辨率'].map((label) => (
+            {[t('duration'), t('resolution')].map((label) => (
               <div key={label} style={{ display: 'flex', gap: 4 }}>
-                {label === '时长' && DURATIONS.map((d, di) => (
+                {label === t('duration') && DURATIONS.map((d, di) => (
                   <button key={d} className={`${styles.chip} ${di === duration ? styles.chipActive : ''}`} onClick={() => setDuration(di)}>
                     <span className={styles.chipLabel}>{label}</span><span className={styles.chipDiv}>·</span><span>{d}</span>
                   </button>
                 ))}
-                {label === '分辨率' && RESOLUTIONS.map((r, ri) => (
+                {label === t('resolution') && RESOLUTIONS.map((r, ri) => (
                   <button key={r} className={`${styles.chip} ${ri === resolution ? styles.chipActive : ''}`} onClick={() => setResolution(ri)}>
                     <span className={styles.chipLabel}>{label}</span><span className={styles.chipDiv}>·</span><span>{r}</span>
                   </button>
@@ -187,14 +188,14 @@ export default function VideoPage() {
             ))}
             {CAMERAS.map((c, ci) => (
               <button key={c} className={`${styles.chip} ${ci === camera ? styles.chipActive : ''}`} onClick={() => setCamera(ci)}>
-                <span className={styles.chipLabel}>镜头</span><span className={styles.chipDiv}>·</span><span>{c}</span>
+                <span className={styles.chipLabel}>{t('camera')}</span><span className={styles.chipDiv}>·</span><span>{c}</span>
               </button>
             ))}
 
             {/* Reference image upload chip */}
             <button
               className={`${styles.chip} ${styles.refChip} ${initImage ? styles.chipActive : ''}`}
-              title="上传参考图"
+              title={t('refImageTitle')}
               onClick={() => setShowRefUpload(true)}
             >
               📷
@@ -215,21 +216,21 @@ export default function VideoPage() {
             </div>
             <button className={styles.generateBtn} onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim()}>
-              {isGenerating ? <><span className={styles.spinner} /> 生成中…</> : '🎬 开始生成'}
+              {isGenerating ? <><span className={styles.spinner} /> {t('generating')}</> : '🎬 ' + t('generate')}
             </button>
           </div>
           <p className={styles.balanceHint}>
-            💡 已启用参考图 {initImage && '✓'}
-            {' · '}余额 <strong>¥4.84</strong> · 预估 ¥{[5,10,15][duration]! * 1.5}
+            💡 {t('refImageEnabled')} {initImage && '✓'}
+            {' · '}{t('balance')} <strong>¥4.84</strong> · {t('estimate')} ¥{[5,10,15][duration]! * 1.5}
           </p>
         </aside>
 
         {/* Right */}
         <main className={styles.rightPanel}>
           <div className={styles.historyTopbar}>
-            <div><span className={styles.historyHeading}>生成历史</span><span className={styles.historyCount}>{history.length} 条</span></div>
+            <div><span className={styles.historyHeading}>{t('history')}</span><span className={styles.historyCount}>{history.length} 条</span></div>
             <div className={styles.historyFilter}>
-              {['全部','视频','收藏'].map((f,i) => <button key={f} className={`${styles.filterBtn} ${i===0 ? styles.filterBtnActive : ''}`}>{f}</button>)}
+              {[t('filterAll'), t('filterVideo'), t('filterFav')].map((f,i) => <button key={f} className={`${styles.filterBtn} ${i===0 ? styles.filterBtnActive : ''}`}>{f}</button>)}
             </div>
           </div>
           <div className={styles.historyGrid}>
@@ -269,7 +270,7 @@ export default function VideoPage() {
         >
           <div style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: 24, width: 340, maxWidth: '90vw' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, margin: 0 }}>📷 参考图（可选）</h3>
+              <h3 style={{ color: '#e2e8f0', fontSize: 16, fontWeight: 700, margin: 0 }}>📷 {t('refImageTitle')}</h3>
               <button onClick={() => setShowRefUpload(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 18 }}>✕</button>
             </div>
 
@@ -291,13 +292,13 @@ export default function VideoPage() {
                 {uploading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 24, height: 24, border: '2px solid rgba(99,102,241,0.3)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                    <span style={{ fontSize: 13 }}>上传中...</span>
+                    <span style={{ fontSize: 13 }}>{t('uploading')}</span>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 28 }}>📷</span>
-                    <span style={{ fontSize: 13, color: '#64748b' }}>点击上传 / 拖拽图片</span>
-                    <span style={{ fontSize: 11, color: '#475569' }}>支持 JPG/PNG，建议 16:9</span>
+                    <span style={{ fontSize: 13, color: '#64748b' }}>{t('refImageUpload')}</span>
+                    <span style={{ fontSize: 11, color: '#475569' }}>{t('refImageHint')}</span>
                   </div>
                 )}
               </div>
@@ -306,13 +307,13 @@ export default function VideoPage() {
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
 
             <p style={{ color: '#475569', fontSize: 12, marginTop: 12, marginBottom: 16, textAlign: 'center' }}>
-              参考图用于图生视频，让 AI 理解你想要的画面风格和构图
+              {t('refImageDesc')}
             </p>
             <button
               onClick={() => setShowRefUpload(false)}
               style={{ width: '100%', padding: '10px', borderRadius: 8, background: '#6366f1', color: '#fff', border: 'none', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
             >
-              确认
+              {t('refImageConfirm')}
             </button>
           </div>
         </div>

@@ -24,7 +24,7 @@ const HISTORY_ITEMS = [
   { id: '6', model: 'FLUX.2 dev · 1024²', prompt: 'AI 神经网络可视化', time: '20 分钟前', img: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=500&q=75', tag: '图片' },
 ];
 
-const PLACEHOLDER = '描述你想要的图片... 例如：一只橘色的猫在草地上奔跑，写实风格...';
+const PLACEHOLDER = '';
 
 export default function ImagePage() {
   const t = useTranslations('image');
@@ -98,9 +98,9 @@ export default function ImagePage() {
               </div>
             </div>
 
-            {['尺寸', '质量', '张数'].map((label, i) => (
+            {[t('size'), t('quality'), t('count')].map((label, i) => (
               <div key={label} style={{ display: 'flex', gap: 4 }}>
-                {label === '尺寸' && SIZES.map((s, si) => (
+                {i === 0 && SIZES.map((s, si) => (
                   <button key={s} className={`${styles.chip} ${si === selectedSize ? styles.chipActive : ''}`}
                     onClick={() => setSelectedSize(si)}>
                     <span className={styles.chipLabel}>{label}</span>
@@ -108,7 +108,7 @@ export default function ImagePage() {
                     <span>{s}</span>
                   </button>
                 ))}
-                {label === '质量' && QUALITIES.map((q, qi) => (
+                {i === 1 && QUALITIES.map((q, qi) => (
                   <button key={q} className={`${styles.chip} ${qi === selectedQuality ? styles.chipActive : ''}`}
                     onClick={() => setSelectedQuality(qi)}>
                     <span className={styles.chipLabel}>{label}</span>
@@ -116,7 +116,7 @@ export default function ImagePage() {
                     <span>{q}</span>
                   </button>
                 ))}
-                {label === '张数' && COUNTS.map((c, ci) => (
+                {i === 2 && COUNTS.map((c, ci) => (
                   <button key={c} className={`${styles.chip} ${ci === selectedCount ? styles.chipActive : ''}`}
                     onClick={() => setSelectedCount(ci)}>
                     <span className={styles.chipLabel}>{label}</span>
@@ -127,7 +127,7 @@ export default function ImagePage() {
               </div>
             ))}
 
-            <button className={`${styles.chip} ${styles.refChip}`} title="上传参考图">📷</button>
+            <button className={`${styles.chip} ${styles.refChip}`} title={t('uploadRef')}>📷</button>
           </div>
 
           {/* Prompt + Generate (tight unit) */}
@@ -135,14 +135,14 @@ export default function ImagePage() {
             <div className={styles.promptBox}>
               <textarea
                 className={styles.promptTextarea}
-                placeholder={PLACEHOLDER}
+                placeholder={t('promptPlaceholder')}
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleGenerate(); }}
               />
               <div className={styles.promptFooter}>
                 <span />
-                <span className={styles.charCount}>{prompt.length} / 2000</span>
+                <span className={styles.charCount}>{prompt.length} {t('charCount')}</span>
               </div>
             </div>
             <button
@@ -152,25 +152,25 @@ export default function ImagePage() {
             >
               {isGenerating ? (
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <span className={styles.spinner} /> 生成中…
+                  <span className={styles.spinner} /> {t('generating')}
                 </span>
-              ) : '🎨 开始生成'}
+              ) : '🎨 ' + t('generate')}
             </button>
           </div>
 
-          <p className={styles.balanceHint}>余额 <strong>¥9.50</strong> · 预估 ¥0.50</p>
+          <p className={styles.balanceHint}>{t('balance')} <strong>¥9.50</strong> · {t('estimate')} ¥0.50</p>
         </aside>
 
         {/* ── Right Panel: History ── */}
         <main className={styles.rightPanel}>
           <div className={styles.historyTopbar}>
             <div>
-              <span className={styles.historyHeading}>生成历史</span>
-              <span className={styles.historyCount}>{history.length} 条</span>
+              <span className={styles.historyHeading}>{t('resultHistory')}</span>
+              <span className={styles.historyCount}>{history.length} {t('records')}</span>
             </div>
             <div className={styles.historyFilter}>
-              {(['全部','图片','收藏'] as const).map((f, i) => {
-                const vals = ['all','图片','收藏'] as const;
+              {([t('filterAll'), t('filterImage'), t('filterFav')] as const).map((f, i) => {
+                const vals = ['all', '图片', '收藏'] as const;
                 return <button key={f} className={`${styles.filterBtn} ${filter === vals[i] ? styles.filterBtnActive : ''}`} onClick={() => setFilter(vals[i]!)}>{f}</button>;
               })}
             </div>

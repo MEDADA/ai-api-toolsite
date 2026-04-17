@@ -1,7 +1,7 @@
 'use client';
 import styles from '../image/page.module.css';
 import { SiteHeader } from '@/components/site-header';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useState, useRef, useEffect } from 'react';
 
 const MODES = [
@@ -34,6 +34,7 @@ function Waveform() {
 }
 
 export default function AudioPage() {
+  const t = useTranslations('audio');
   const locale = useLocale();
   const [modeIdx, setModeIdx] = useState(0);
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0]);
@@ -100,7 +101,7 @@ export default function AudioPage() {
             {MODES.map((m, mi) => (
               <button key={m.id} className={`${styles.chip} ${mi === modeIdx ? styles.chipActive : ''}`}
                 onClick={() => setModeIdx(mi)}>
-                {mi === 0 ? 'TTS' : mi === 1 ? 'ASR' : '克隆'}
+                {mi === 0 ? t('chipTts') : mi === 1 ? t('chipAsr') : t('chipClone')}
               </button>
             ))}
 
@@ -108,7 +109,7 @@ export default function AudioPage() {
             {LANGUAGES.map((l, li) => (
               <button key={l} className={`${styles.chip} ${li === language ? styles.chipActive : ''}`}
                 onClick={() => setLanguage(li)}>
-                <span className={styles.chipLabel}>语言</span><span className={styles.chipDiv}>·</span><span>{l}</span>
+                <span className={styles.chipLabel}>{t('language')}</span><span className={styles.chipDiv}>·</span><span>{l}</span>
               </button>
             ))}
           </div>
@@ -153,7 +154,7 @@ export default function AudioPage() {
 
             {/* Speed display */}
             <span style={{ fontSize: 11, color: '#475569', marginLeft: 4, whiteSpace: 'nowrap', padding: '5px 0' }}>
-              语速 <strong style={{ color: '#34d399' }}>{speed.toFixed(1)}x</strong>
+              {t('speed')} <strong style={{ color: '#34d399' }}>{speed.toFixed(1)}x</strong>
             </span>
           </div>
 
@@ -175,16 +176,16 @@ export default function AudioPage() {
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#374151', fontSize: 10, marginTop: 4 }}>
-              <span>慢速 (0.5x)</span>
-              <span>正常 (1.0x)</span>
-              <span>快速 (2.0x)</span>
+              <span>{t('speedSlow')}</span>
+              <span>{t('speedNormal')}</span>
+              <span>{t('speedFast')}</span>
             </div>
           </div>
 
           <div className={styles.coreUnit}>
             <div className={styles.promptBox}>
               <textarea className={styles.promptTextarea}
-                placeholder={modeIdx === 0 ? '输入要转换的文字...' : modeIdx === 1 ? '上传或录制语音...' : '输入要克隆的参考文字...'}
+                placeholder={modeIdx === 0 ? t('placeholderTts') : modeIdx === 1 ? t('placeholderAsr') : t('placeholderClone')}
                 value={text}
                 onChange={e => setText(e.target.value)}
               />
@@ -195,18 +196,18 @@ export default function AudioPage() {
             </div>
             <button className={styles.generateBtnGreen} onClick={handleGenerate}
               disabled={isGenerating || !text.trim()}>
-              {isGenerating ? <><span className={styles.spinner} /> 生成中…</> : '🎙️ 开始生成'}
+              {isGenerating ? <><span className={styles.spinner} /> {t('generating')}</> : '🎙️ ' + t('generate')}
             </button>
           </div>
-          <p className={styles.balanceHint}>余额 <strong>¥9.50</strong> · 预估 ¥0.30</p>
+          <p className={styles.balanceHint}>{t('balance')} <strong>¥9.50</strong> · {t('estimate')} ¥0.30</p>
         </aside>
 
         {/* Right */}
         <main className={styles.rightPanel}>
           <div className={styles.historyTopbar}>
-            <div><span className={styles.historyHeading}>生成历史</span><span className={styles.historyCount}>{history.length} 条</span></div>
+            <div><span className={styles.historyHeading}>{t('history')}</span><span className={styles.historyCount}>{history.length} {t('records')}</span></div>
             <div className={styles.historyFilter}>
-              {['全部','TTS','ASR','收藏'].map((f,i) => (
+              {[t('filterAll'), t('filterTts'), t('filterAsr'), t('filterFav')].map((f,i) => (
                 <button key={f} className={`${styles.filterBtn} ${i===0 ? styles.filterBtnActive + ' ' + styles.audioGreen : ''}`}>{f}</button>
               ))}
             </div>
@@ -226,7 +227,7 @@ export default function AudioPage() {
                 <div className={styles.audioFooter}>
                   <span className={styles.audioTime}>{item.time}</span>
                   <div className={styles.audioActions}>
-                    <button className={styles.audioAct}>⬇ 下载</button>
+                    <button className={styles.audioAct}>⬇ {t('downloadFile')}</button>
                     <button className={styles.audioAct}>⭐</button>
                   </div>
                 </div>
