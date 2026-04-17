@@ -45,7 +45,7 @@ export async function videoProcessor(
 
   // ── Step 2: Get channel config ──────────────────────────────────
   const channel = await prisma.providerChannel.findFirst({
-    where: { model: { slug: modelSlug }, status: 'ACTIVE' },
+    where: { model_id: modelSlug, status: 'ACTIVE' },
     orderBy: { priority: 'asc' },
   });
 

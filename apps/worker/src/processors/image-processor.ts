@@ -246,7 +246,7 @@ async function handleFailure(
 async function getChannelApiKey(prisma: PrismaClient, modelSlug: string): Promise<string> {
   const channel = await prisma.providerChannel.findFirst({
     where: {
-      model: { slug: modelSlug },
+      model_id: modelSlug,
       status: 'ACTIVE',
     },
   });
@@ -265,7 +265,7 @@ async function logProviderRequest(
   statusCode: number
 ) {
   const channel = await prisma.providerChannel.findFirst({
-    where: { model: { slug: modelSlug } },
+    where: { model_id: modelSlug },
   });
   if (!channel) return;
 
