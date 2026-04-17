@@ -199,7 +199,145 @@
 
 ---
 
-## 10. 后续页面设计流程
+## 10. 统一交互规范（v2.0 — 2026-04-17）
+
+> 所有核心页面（图片/视频/语音）必须遵循以下统一规范，确保 UI 一致性和开发可落地性。
+
+### 10.1 布局统一（所有页面）
+
+| 区域 | 规格 |
+|------|------|
+| 左侧面板 | 38.2%，min 320px / max 440px，flex 列布局，overflow-y: auto |
+| 右侧区域 | 61.8%，瀑布流网格（3列，Mobile 2列）；语音页为纵向列表 |
+| 面板间距 | padding: 14px 16px（左侧），padding: 16px 20px（右侧）|
+| 面板内 gap | 各控件之间 5–6px 间隔 |
+
+### 10.2 顶部导航（Header）
+
+```html
+<nav class="header-nav">
+  <a href="#">首页</a>
+  <a href="#">图片生成</a>  <!-- 当前页加 class="active" -->
+  <a href="#">视频生成</a>
+  <a href="#">语音生成</a>
+</nav>
+```
+- 激活态：文字 `#a5b4fc` + `background: rgba(99,102,241,0.15)` + `border: 1px solid rgba(99,102,241,0.3)` + `border-radius: 8px`
+- 非激活态：文字 `#475569`，无背景
+
+### 10.3 模型选择 — 统一下拉
+
+**所有页面的模型选择统一使用下拉组件，禁止用 Chip/Pill 展开列表。**
+
+```
+结构：
+┌──────────────────────────────────────┐
+│ 🎬 Seedance 1.5 Pro          ▼       │  ← voice-pill / model-pill
+└──────────────────────────────────────┘
+  ┌──────────────────────────────────┐
+  │ 🎬 Seedance 1.5 Pro      ✓       │  ← 已选，带勾选
+  │ 🚀 Kling 3.0                     │
+  │ ⚡ MiniMax Video-01              │
+  └──────────────────────────────────┘  ← 下拉菜单
+
+CSS 规范：
+- 菜单容器：position: absolute, z-index: 100, background: #12121c
+- 边框：border: 1px solid rgba(255,255,255,0.09)
+- 圆角：border-radius: 10px, padding: 6px
+- 阴影：box-shadow: 0 12px 40px rgba(0,0,0,0.6)
+- 菜单项 hover：background: rgba(255,255,255,0.06)
+- 菜单项选中：background: rgba(99,102,241,0.1) + 文字 #a5b4fc
+- 触发：点击 Pill 展开，再次点击或点击外部关闭
+```
+
+### 10.4 参数 Chip 组
+
+**横向排列，包裹在 `.top-bar` / `.lang-chips` 容器中。**
+
+```
+选中态：border-color: rgba(99,102,241,0.4) + background: rgba(99,102,241,0.08) + color: #a5b4fc
+hover：border-color: rgba(255,255,255,0.15) + color: #e2e8f0
+默认：background: rgba(255,255,255,0.04) + border: 1px solid rgba(255,255,255,0.08) + color: #64748b
+
+标签（.lbl）：font-size: 9px, font-weight: 700, text-transform: uppercase, letter-spacing: 0.06em, color: #374151
+分隔（.div）：color: #374151
+```
+
+**同组 Chip 互斥**：点击某 Chip 时，同组其他 Chip 取消激活状态（通过 `.lbl` 文案匹配分组）。
+
+### 10.5 参考图上传（视频/图片页）
+
+**交互模式：在 Chip 栏最右侧放置 📷 小按钮，点击展开上传区域。**
+
+```
+📷 小按钮（.ref-chip / .top-chip.ref-chip）：
+  - 尺寸：28×28px（宽高相等）
+  - padding: 0，justify-content: center
+  - 激活态：border-color: rgba(99,102,241,0.5) + background: rgba(99,102,241,0.15)
+
+上传区域（.ref-upload-area）：
+  - 默认 display: none，激活时 display: block
+  - 16:9 aspect-ratio，border-radius: 10px
+  - 虚线边框：border: 1.5px dashed rgba(255,255,255,0.1)
+  - hover：border-color: rgba(99,102,241,0.3) + background: rgba(99,102,241,0.05)
+  - 上传后显示图片 + 右上角 ✕ 删除按钮
+```
+
+### 10.6 语速滑块（语音页）
+
+```
+滑块范围：min=0.5, max=2.0, step=0.1，当前值显示在滑块上方
+
+布局：
+  语速                    1.0×      ← 右侧显示当前值（#a5b4fc, font-weight: 700）
+  ━━━━━━━━━●━━━━━━━━━━
+  0.5×      1.0×  1.5×   2.0×      ← 刻度标签
+
+轨道：height: 6px, background: rgba(255,255,255,0.06), border-radius: 3px
+填充（.speed-fill）：position: absolute, left: 0, top: 0, height: 100%, background: linear-gradient(90deg, #6366f1, #818cf8)
+滑块（::-webkit-slider-thumb）：width/height: 16px, border-radius: 50%, background: #fff, box-shadow: 0 1px 6px rgba(0,0,0,0.5), 0 0 0 2px rgba(99,102,241,0.3)
+```
+
+### 10.7 音色下拉 + 试听（语音页）
+
+**在模型下拉的基础上，右侧增加「▶ 试听」按钮。**
+
+```
+布局：voice-row { display: flex; gap: 6px; }
+     ├─ voice-dropdown（flex: 1）
+     └─ voice-preview-btn（width: 30px, height: 30px, border-radius: 7px）
+
+下拉每项结构：
+  🎙️ │ 晓晓                  ✓
+      │ 年轻女性，温暖自然，适合旁白
+
+试听按钮交互：
+  - 默认：▶ 按钮，hover 时 border-color 变紫
+  - 播放中：显示"⏸"，按钮变紫色激活态
+  - 3 秒后自动恢复（模拟试听时长）
+```
+
+### 10.8 登录弹窗
+
+**触发场景：点击用户头像或未登录状态下操作。**
+
+```
+容器：width: 400px, max-width: 90vw, background: #13131f
+  border: 1px solid rgba(255,255,255,0.09)
+  border-radius: 18px
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7)
+
+Tab 切换：手机号 / 邮箱，两个表单互斥显示
+验证码输入：6 个独立 input（width: 40px, height: 48px），自动跳格
+发送按钮：60s 倒计时，disabled 态显示"Xs 后重发"
+OAuth 按钮：Google SVG icon + Apple SVG icon，hover 态背景变亮
+首次登录 Banner：绿色渐变背景 + 脉冲 dot + ¥5.00 体验金文案
+底部：服务条款 / 隐私政策链接
+```
+
+---
+
+## 11. 后续页面设计流程
 
 所有新页面/大改必须经过：
 1. DevPM 拆解需求 → PRD

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>语音处理 - Mockup</title>
+<title>语音生成 - Mockup</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #08080f; color: #fff; height: 100vh; overflow: hidden; }
@@ -21,31 +21,60 @@
   .left-panel { width: 38.2%; min-width: 320px; max-width: 440px; height: 100%; display: flex; flex-direction: column; padding: 14px 16px; overflow-y: auto; flex-shrink: 0; }
   .left-panel::-webkit-scrollbar { width: 4px; }
   .left-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
+
   /* Mode toggle */
   .mode-toggle { display: flex; gap: 5px; margin-bottom: 10px; }
   .mode-btn { flex: 1; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: #475569; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
   .mode-btn:hover { border-color: rgba(255,255,255,0.14); color: #94a3b8; }
   .mode-btn.active { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.1); color: #a5b4fc; }
-  /* Top bar / chips */
-  .top-bar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
-  .model-pill { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; cursor: pointer; }
-  .model-pill-icon { font-size: 12px; }
-  .model-pill-name { font-size: 11px; font-weight: 600; color: #a5b4fc; }
+
+  /* Voice dropdown */
+  .voice-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+  .voice-dropdown { position: relative; flex: 1; }
+  .voice-pill { display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; cursor: pointer; transition: border-color 0.15s; }
+  .voice-pill:hover { border-color: rgba(99,102,241,0.4); }
+  .voice-pill-icon { font-size: 12px; }
+  .voice-pill-name { font-size: 11px; font-weight: 600; color: #a5b4fc; }
+  .voice-pill-meta { font-size: 9px; color: #475569; margin-left: 2px; }
+  .voice-pill-arrow { font-size: 9px; color: #475569; }
+  .voice-preview-btn { width: 30px; height: 30px; border-radius: 7px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: #64748b; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+  .voice-preview-btn:hover { border-color: rgba(99,102,241,0.4); color: #a5b4fc; background: rgba(99,102,241,0.08); }
+  .voice-preview-btn.playing { border-color: rgba(99,102,241,0.5); color: #a5b4fc; background: rgba(99,102,241,0.12); }
+  .voice-dropdown-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 100; background: #12121c; border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; padding: 6px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+  .voice-dropdown-menu.open { display: block; }
+  .voice-dropdown-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
+  .voice-dropdown-item:hover { background: rgba(255,255,255,0.06); }
+  .voice-dropdown-item.selected { background: rgba(99,102,241,0.1); }
+  .voice-item-icon { font-size: 14px; }
+  .voice-item-info { flex: 1; }
+  .voice-item-name { font-size: 11px; font-weight: 600; color: #e2e8f0; }
+  .voice-dropdown-item.selected .voice-item-name { color: #a5b4fc; }
+  .voice-item-desc { font-size: 9px; color: #475569; margin-top: 1px; }
+  .voice-item-check { font-size: 9px; color: #a5b4fc; }
+
+  /* Language chips */
+  .lang-chips { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
   .top-chip { display: flex; align-items: center; gap: 2px; padding: 5px 9px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; cursor: pointer; font-size: 11px; color: #64748b; transition: all 0.15s; }
   .top-chip:hover { border-color: rgba(255,255,255,0.15); color: #e2e8f0; }
   .top-chip.active { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.08); color: #a5b4fc; font-weight: 600; }
   .top-chip .lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #374151; margin-right: 2px; }
   .top-chip .div { color: #374151; }
-  /* Audio upload for ASR */
-  .audio-upload { width: 100%; height: 80px; border-radius: 11px; border: 1.5px dashed rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; margin-bottom: 10px; transition: all 0.2s; }
-  .audio-upload:hover { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.05); }
-  .audio-upload-icon { font-size: 22px; margin-bottom: 4px; }
-  .audio-upload-text { font-size: 12px; color: #475569; }
-  .audio-upload-hint { font-size: 10px; color: #334155; margin-top: 2px; }
-  /* Clone reference text */
-  .clone-hint { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(99,102,241,0.07); border: 1px solid rgba(99,102,241,0.15); border-radius: 8px; margin-bottom: 10px; font-size: 11px; color: #818cf8; }
-  .clone-hint span:first-child { font-size: 14px; }
-  /* Core unit */
+
+  /* Speed slider */
+  .speed-row { margin-bottom: 10px; }
+  .speed-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .speed-label-l { font-size: 10px; color: #475569; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .speed-label-r { font-size: 12px; color: #a5b4fc; font-weight: 700; }
+  .speed-slider-wrap { position: relative; }
+  .speed-track { position: relative; height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; }
+  .speed-fill { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg, #6366f1, #818cf8); border-radius: 3px; width: 50%; transition: width 0.1s; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; background: transparent; position: absolute; top: 0; left: 0; cursor: pointer; z-index: 2; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,0.5), 0 0 0 2px rgba(99,102,241,0.3); cursor: pointer; transition: box-shadow 0.15s; }
+  input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 1px 8px rgba(0,0,0,0.6), 0 0 0 3px rgba(99,102,241,0.45); }
+  .speed-ticks { display: flex; justify-content: space-between; padding: 0 2px; margin-top: 4px; }
+  .speed-tick { font-size: 9px; color: #374151; }
+
+  /* Prompt + Generate */
   .core-unit { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .prompt-box { flex: 1; background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.08); border-bottom: none; border-radius: 12px 12px 0 0; overflow: hidden; display: flex; flex-direction: column; transition: border-color 0.2s; }
   .prompt-box:focus-within { border-color: rgba(99,102,241,0.4); }
@@ -57,6 +86,7 @@
   .generate-btn:hover { box-shadow: 0 6px 24px rgba(99,102,241,0.55); }
   .balance-hint { text-align: center; font-size: 10px; color: #334155; margin-top: 6px; }
   .balance-hint strong { color: #48bb78; font-weight: 600; }
+
   /* Right panel */
   .right-panel { flex: 1; height: 100%; overflow-y: auto; padding: 16px 20px; }
   .right-panel::-webkit-scrollbar { width: 5px; }
@@ -67,7 +97,6 @@
   .history-filter { display: flex; gap: 5px; }
   .filter-btn { padding: 4px 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.07); background: transparent; color: #475569; font-size: 11px; cursor: pointer; }
   .filter-btn.active { border-color: rgba(99,102,241,0.4); color: #a5b4fc; background: rgba(99,102,241,0.08); }
-  /* Audio list (vertical, not grid) */
   .audio-list { display: flex; flex-direction: column; gap: 8px; }
   .audio-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 11px; overflow: hidden; cursor: pointer; transition: all 0.2s; padding: 12px 14px; }
   .audio-card:hover { border-color: rgba(99,102,241,0.3); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
@@ -78,11 +107,9 @@
   .gen-label { font-size: 10px; color: #a5b4fc; font-weight: 600; }
   .gen-progress-track { height: 2px; background: rgba(255,255,255,0.04); margin-top: 6px; }
   .gen-progress-bar { height: 100%; background: linear-gradient(90deg, #6366f1, #818cf8); }
-  /* Player */
   .audio-player { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .play-btn { width: 30px; height: 30px; border-radius: 50%; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
   .play-btn:hover { background: rgba(99,102,241,0.25); box-shadow: 0 0 12px rgba(99,102,241,0.3); }
-  /* Waveform */
   .waveform { display: flex; align-items: center; gap: 1.5px; height: 28px; flex: 1; overflow: hidden; }
   .waveform-bar { width: 2px; border-radius: 1px; min-height: 2px; transition: height 0.1s; }
   .audio-duration { font-size: 9px; color: #475569; flex-shrink: 0; width: 26px; text-align: right; }
@@ -101,6 +128,7 @@
 <header>
   <a href="#" class="logo"><span>🎨</span> AI Toolsite</a>
   <nav class="header-nav">
+    <a href="#">首页</a>
     <a href="#">图片生成</a>
     <a href="#">视频生成</a>
     <a href="#" class="active">语音生成</a>
@@ -120,51 +148,97 @@
       <button class="mode-btn">声音克隆</button>
     </div>
 
-    <!-- Top bar: voice + language + speed chips (TTS mode) -->
-    <div class="top-bar">
-      <div class="model-pill">
-        <span class="model-pill-icon">🎙️</span>
-        <span class="model-pill-name">晓晓（女声）</span>
+    <!-- Voice dropdown row -->
+    <div class="voice-row">
+      <div class="voice-dropdown">
+        <div class="voice-pill" id="voicePill">
+          <span class="voice-pill-icon" id="voiceIcon">🎙️</span>
+          <span class="voice-pill-name" id="voiceName">晓晓</span>
+          <span class="voice-pill-meta" id="voiceMeta">· 温暖女声</span>
+          <span class="voice-pill-arrow">▼</span>
+        </div>
+        <div class="voice-dropdown-menu" id="voiceMenu">
+          <div class="voice-dropdown-item selected" data-name="晓晓" data-icon="🎙️" data-meta="温暖女声" data-desc="年轻女性，温暖自然，适合旁白">
+            <span class="voice-item-icon">🎙️</span>
+            <div class="voice-item-info">
+              <div class="voice-item-name">晓晓</div>
+              <div class="voice-item-desc">年轻女性，温暖自然，适合旁白</div>
+            </div>
+            <span class="voice-item-check">✓</span>
+          </div>
+          <div class="voice-dropdown-item" data-name="云飞" data-icon="🎤" data-meta="磁性男声" data-desc="成熟男性，磁性低沉，适合资讯">
+            <span class="voice-item-icon">🎤</span>
+            <div class="voice-item-info">
+              <div class="voice-item-name">云飞</div>
+              <div class="voice-item-desc">成熟男性，磁性低沉，适合资讯</div>
+            </div>
+            <span class="voice-item-check"></span>
+          </div>
+          <div class="voice-dropdown-item" data-name="小宁" data-icon="🗣️" data-meta="活泼女声" data-desc="年轻女性，活泼开朗，适合对话">
+            <span class="voice-item-icon">🗣️</span>
+            <div class="voice-item-info">
+              <div class="voice-item-name">小宁</div>
+              <div class="voice-item-desc">年轻女性，活泼开朗，适合对话</div>
+            </div>
+            <span class="voice-item-check"></span>
+          </div>
+          <div class="voice-dropdown-item" data-name="阿波" data-icon="🔊" data-meta="浑厚男声" data-desc="中年男性，浑厚有力，适合演讲">
+            <span class="voice-item-icon">🔊</span>
+            <div class="voice-item-info">
+              <div class="voice-item-name">阿波</div>
+              <div class="voice-item-desc">中年男性，浑厚有力，适合演讲</div>
+            </div>
+            <span class="voice-item-check"></span>
+          </div>
+        </div>
       </div>
+      <button class="voice-preview-btn" id="voicePreviewBtn" title="试听音色">▶</button>
+    </div>
+
+    <!-- Language chips -->
+    <div class="lang-chips">
+      <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#374151;margin-right:2px;">语言</span>
       <div class="top-chip active">
-        <span class="lbl">音色</span><span class="div">·</span><span>晓晓</span>
+        <span>中文</span>
       </div>
       <div class="top-chip">
-        <span class="lbl">音色</span><span class="div">·</span><span>云飞</span>
+        <span>英文</span>
       </div>
       <div class="top-chip">
-        <span class="lbl">音色</span><span class="div">·</span><span>小宁</span>
+        <span>中日</span>
       </div>
       <div class="top-chip">
-        <span class="lbl">音色</span><span class="div">·</span><span>阿波</span>
+        <span>中英</span>
       </div>
-      <div class="top-chip active">
-        <span class="lbl">语言</span><span class="div">·</span><span>中文</span>
+    </div>
+
+    <!-- Speed slider -->
+    <div class="speed-row">
+      <div class="speed-label">
+        <span class="speed-label-l">语速</span>
+        <span class="speed-label-r" id="speedValue">1.0×</span>
       </div>
-      <div class="top-chip">
-        <span class="lbl">语言</span><span class="div">·</span><span>英文</span>
+      <div class="speed-slider-wrap">
+        <div class="speed-track">
+          <div class="speed-fill" id="speedFill"></div>
+        </div>
+        <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0">
       </div>
-      <div class="top-chip">
-        <span class="lbl">语言</span><span class="div">·</span><span>中日</span>
-      </div>
-      <div class="top-chip active">
-        <span class="lbl">语速</span><span class="div">·</span><span>1.0x</span>
-      </div>
-      <div class="top-chip">
-        <span class="lbl">语速</span><span class="div">·</span><span>0.8x</span>
-      </div>
-      <div class="top-chip">
-        <span class="lbl">语速</span><span class="div">·</span><span>1.2x</span>
+      <div class="speed-ticks">
+        <span class="speed-tick">0.5×</span>
+        <span class="speed-tick">1.0×</span>
+        <span class="speed-tick">1.5×</span>
+        <span class="speed-tick">2.0×</span>
       </div>
     </div>
 
     <!-- Prompt textarea -->
     <div class="core-unit">
       <div class="prompt-box">
-        <textarea class="prompt-textarea" placeholder="输入要转换的文字，支持多语言和长文本朗读…"></textarea>
+        <textarea class="prompt-textarea" id="promptTa" placeholder="输入要转换的文字，支持多语言和长文本朗读…"></textarea>
         <div class="prompt-footer">
           <span></span>
-          <span class="char-count">0 / 5000</span>
+          <span class="char-count" id="charCount">0 / 5000</span>
         </div>
       </div>
       <button class="generate-btn">🎙️ 开始生成</button>
@@ -283,7 +357,7 @@
   </main>
 </div>
 <script>
-  // Generate waveform bars
+  // Waveform generator
   function genWave(waveId, fillRatio) {
     const container = document.getElementById(waveId);
     if (!container) return;
@@ -301,6 +375,95 @@
   genWave('wave3', 0.5);
   genWave('wave4', 0.9);
   genWave('gen-waveform', 0.4);
+
+  // Voice dropdown
+  const voicePill = document.getElementById('voicePill');
+  const voiceMenu = document.getElementById('voiceMenu');
+  const voiceName = document.getElementById('voiceName');
+  const voiceIcon = document.getElementById('voiceIcon');
+  const voiceMeta = document.getElementById('voiceMeta');
+  const previewBtn = document.getElementById('voicePreviewBtn');
+
+  voicePill.addEventListener('click', () => {
+    voiceMenu.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.voice-dropdown')) {
+      voiceMenu.classList.remove('open');
+    }
+  });
+
+  voiceMenu.querySelectorAll('.voice-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      voiceMenu.querySelectorAll('.voice-dropdown-item').forEach(i => {
+        i.classList.remove('selected');
+        i.querySelector('.voice-item-check').textContent = '';
+      });
+      item.classList.add('selected');
+      item.querySelector('.voice-item-check').textContent = '✓';
+      voiceName.textContent = item.dataset.name;
+      voiceIcon.textContent = item.dataset.icon;
+      voiceMeta.textContent = '· ' + item.dataset.meta;
+      voiceMenu.classList.remove('open');
+    });
+  });
+
+  // Voice preview (simulate play)
+  let isPlaying = false;
+  previewBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    voiceMenu.classList.remove('open');
+    if (isPlaying) return;
+    isPlaying = true;
+    previewBtn.textContent = '⏸';
+    previewBtn.classList.add('playing');
+    const voice = voiceName.textContent;
+    const origText = previewBtn.title;
+    previewBtn.title = '试听中…';
+    setTimeout(() => {
+      isPlaying = false;
+      previewBtn.textContent = '▶';
+      previewBtn.classList.remove('playing');
+      previewBtn.title = origText || '试听音色';
+    }, 3000);
+  });
+
+  // Speed slider
+  const speedSlider = document.getElementById('speedSlider');
+  const speedValue = document.getElementById('speedValue');
+  const speedFill = document.getElementById('speedFill');
+
+  function updateSpeed(val) {
+    speedValue.textContent = val + '×';
+    const pct = ((val - 0.5) / (2.0 - 0.5)) * 100;
+    speedFill.style.width = pct + '%';
+  }
+
+  speedSlider.addEventListener('input', (e) => {
+    updateSpeed(parseFloat(e.target.value));
+  });
+  updateSpeed(1.0);
+
+  // Mode toggle
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Language chips
+  document.querySelectorAll('.lang-chips .top-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.lang-chips .top-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+
+  // Char count
+  document.getElementById('promptTa').addEventListener('input', (e) => {
+    document.getElementById('charCount').textContent = e.target.value.length + ' / 5000';
+  });
 </script>
 </body>
 </html>

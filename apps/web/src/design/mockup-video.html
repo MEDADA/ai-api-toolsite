@@ -21,31 +21,43 @@
   .left-panel { width: 38.2%; min-width: 320px; max-width: 440px; height: 100%; display: flex; flex-direction: column; padding: 14px 16px; overflow-y: auto; flex-shrink: 0; }
   .left-panel::-webkit-scrollbar { width: 4px; }
   .left-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 2px; }
-  /* Mode toggle */
-  .mode-toggle { display: flex; gap: 5px; margin-bottom: 10px; }
-  .mode-btn { flex: 1; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: #475569; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-  .mode-btn:hover { border-color: rgba(255,255,255,0.14); color: #94a3b8; }
-  .mode-btn.active { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.1); color: #a5b4fc; }
-  /* Image upload for img2vid */
-  .image-upload { width: 100%; aspect-ratio: 16/9; border-radius: 11px; border: 1.5px dashed rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; margin-bottom: 10px; overflow: hidden; transition: all 0.2s; position: relative; }
-  .image-upload:hover { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.05); }
-  .upload-icon { font-size: 26px; margin-bottom: 6px; }
-  .upload-text { font-size: 12px; color: #475569; }
-  .upload-hint { font-size: 10px; color: #334155; margin-top: 3px; }
-  .preview-wrap { position: relative; width: 100%; height: 100%; }
-  .preview-img { width: 100%; height: 100%; object-fit: cover; }
-  .preview-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #94a3b8; opacity: 0; transition: opacity 0.2s; }
-  .image-upload:hover .preview-overlay { opacity: 1; }
   /* Top bar / chips */
-  .top-bar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+  .top-bar { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
   .model-pill { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.25); border-radius: 8px; cursor: pointer; }
+  .model-pill:hover { border-color: rgba(99,102,241,0.4); }
   .model-pill-icon { font-size: 12px; }
   .model-pill-name { font-size: 11px; font-weight: 600; color: #a5b4fc; }
+  .model-pill-arrow { font-size: 9px; color: #475569; }
   .top-chip { display: flex; align-items: center; gap: 2px; padding: 5px 9px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; cursor: pointer; font-size: 11px; color: #64748b; transition: all 0.15s; }
   .top-chip:hover { border-color: rgba(255,255,255,0.15); color: #e2e8f0; }
   .top-chip.active { border-color: rgba(99,102,241,0.4); background: rgba(99,102,241,0.08); color: #a5b4fc; font-weight: 600; }
   .top-chip .lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #374151; margin-right: 2px; }
   .top-chip .div { color: #374151; }
+  /* Ref image toggle chip (camera icon) */
+  .ref-chip { width: 28px; height: 28px; padding: 0; justify-content: center; flex-shrink: 0; }
+  .ref-chip.active { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.15); }
+  /* Model dropdown */
+  .model-dropdown { position: relative; display: inline-block; }
+  .model-dropdown-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 100; background: #12121c; border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; padding: 6px; min-width: 180px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+  .model-dropdown-menu.open { display: block; }
+  .model-dropdown-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 7px; cursor: pointer; transition: background 0.15s; }
+  .model-dropdown-item:hover { background: rgba(255,255,255,0.06); }
+  .model-dropdown-item.selected { background: rgba(99,102,241,0.1); }
+  .model-dropdown-item-icon { font-size: 13px; }
+  .model-dropdown-item-name { font-size: 11px; font-weight: 600; color: #e2e8f0; }
+  .model-dropdown-item.selected .model-dropdown-item-name { color: #a5b4fc; }
+  .model-dropdown-item-check { margin-left: auto; font-size: 9px; color: #a5b4fc; }
+  /* Reference image upload area */
+  .ref-upload-area { display: none; width: 100%; margin-bottom: 8px; border-radius: 10px; overflow: hidden; }
+  .ref-upload-area.visible { display: block; }
+  .ref-upload-box { width: 100%; aspect-ratio: 16/9; border-radius: 10px; border: 1.5px dashed rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+  .ref-upload-box:hover { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.05); }
+  .ref-upload-icon { font-size: 24px; margin-bottom: 5px; }
+  .ref-upload-text { font-size: 11px; color: #475569; }
+  .ref-upload-hint { font-size: 9px; color: #334155; margin-top: 2px; }
+  .ref-preview-wrap { position: relative; width: 100%; height: 100%; }
+  .ref-preview-img { width: 100%; height: 100%; object-fit: cover; }
+  .ref-preview-remove { position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,0.65); color: #fff; border: none; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; }
   /* Core unit */
   .core-unit { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .prompt-box { flex: 1; background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.08); border-bottom: none; border-radius: 12px 12px 0 0; overflow: hidden; display: flex; flex-direction: column; transition: border-color 0.2s; }
@@ -101,6 +113,7 @@
 <header>
   <a href="#" class="logo"><span>🎨</span> AI Toolsite</a>
   <nav class="header-nav">
+    <a href="#">首页</a>
     <a href="#">图片生成</a>
     <a href="#" class="active">视频生成</a>
     <a href="#">语音生成</a>
@@ -113,17 +126,31 @@
 <div class="layout">
   <aside class="left-panel">
 
-    <!-- Mode toggle: 文生视频 / 图生视频 -->
-    <div class="mode-toggle">
-      <button class="mode-btn active">✍️ 文生视频</button>
-      <button class="mode-btn">🖼️ 图生视频</button>
-    </div>
-
-    <!-- Top bar: model pill + duration + resolution + camera -->
+    <!-- Top bar: model dropdown + chips + ref camera -->
     <div class="top-bar">
-      <div class="model-pill">
-        <span class="model-pill-icon">🎬</span>
-        <span class="model-pill-name">Seedance 1.5 Pro</span>
+      <div class="model-dropdown">
+        <div class="model-pill" id="modelPill">
+          <span class="model-pill-icon">🎬</span>
+          <span class="model-pill-name" id="modelName">Seedance 1.5 Pro</span>
+          <span class="model-pill-arrow">▼</span>
+        </div>
+        <div class="model-dropdown-menu" id="modelMenu">
+          <div class="model-dropdown-item selected" data-model="Seedance 1.5 Pro" data-icon="🎬">
+            <span class="model-dropdown-item-icon">🎬</span>
+            <span class="model-dropdown-item-name">Seedance 1.5 Pro</span>
+            <span class="model-dropdown-item-check">✓</span>
+          </div>
+          <div class="model-dropdown-item" data-model="Kling 3.0" data-icon="🚀">
+            <span class="model-dropdown-item-icon">🚀</span>
+            <span class="model-dropdown-item-name">Kling 3.0</span>
+            <span class="model-dropdown-item-check"></span>
+          </div>
+          <div class="model-dropdown-item" data-model="MiniMax Video-01" data-icon="⚡">
+            <span class="model-dropdown-item-icon">⚡</span>
+            <span class="model-dropdown-item-name">MiniMax Video-01</span>
+            <span class="model-dropdown-item-check"></span>
+          </div>
+        </div>
       </div>
       <div class="top-chip active">
         <span class="lbl">时长</span><span class="div">·</span><span>5秒</span>
@@ -152,15 +179,33 @@
       <div class="top-chip">
         <span class="lbl">镜头</span><span class="div">·</span><span>平移</span>
       </div>
+      <div class="top-chip ref-chip" id="refChip" title="添加参考图">
+        📷
+      </div>
+    </div>
+
+    <!-- Reference image upload area (toggled by ref chip) -->
+    <div class="ref-upload-area" id="refUploadArea">
+      <div class="ref-upload-box" id="refUploadBox">
+        <div id="refEmpty">
+          <div class="ref-upload-icon">🖼️</div>
+          <div class="ref-upload-text">上传参考图（可选）</div>
+          <div class="ref-upload-hint">点击或拖拽上传 · 支持 JPG/PNG</div>
+        </div>
+        <div id="refPreview" style="display:none;width:100%;height:100%;">
+          <img class="ref-preview-img" id="refImg" src="" alt="">
+          <button class="ref-preview-remove" id="refRemove">✕</button>
+        </div>
+      </div>
     </div>
 
     <!-- Prompt + Generate -->
     <div class="core-unit">
       <div class="prompt-box">
-        <textarea class="prompt-textarea" placeholder="描述你想要的视频场景… 例如：无人机穿越峡谷，极速飞行体验，镜头快速向前推进"></textarea>
+        <textarea class="prompt-textarea" id="promptTa" placeholder="描述你想要的视频场景… 例如：无人机穿越峡谷，极速飞行体验，镜头快速向前推进"></textarea>
         <div class="prompt-footer">
           <span></span>
-          <span class="char-count">0 / 1000</span>
+          <span class="char-count" id="charCount">0 / 1000</span>
         </div>
       </div>
       <button class="generate-btn">🎬 开始生成</button>
@@ -266,5 +311,77 @@
     </div>
   </main>
 </div>
+<script>
+  // Model dropdown
+  const modelPill = document.getElementById('modelPill');
+  const modelMenu = document.getElementById('modelMenu');
+  const modelName = document.getElementById('modelName');
+
+  modelPill.addEventListener('click', () => {
+    modelMenu.classList.toggle('open');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.model-dropdown')) {
+      modelMenu.classList.remove('open');
+    }
+  });
+
+  modelMenu.querySelectorAll('.model-dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      modelMenu.querySelectorAll('.model-dropdown-item').forEach(i => {
+        i.classList.remove('selected');
+        i.querySelector('.model-dropdown-item-check').textContent = '';
+      });
+      item.classList.add('selected');
+      item.querySelector('.model-dropdown-item-check').textContent = '✓';
+      modelName.textContent = item.dataset.model;
+      modelPill.querySelector('.model-pill-icon').textContent = item.dataset.icon;
+      modelMenu.classList.remove('open');
+    });
+  });
+
+  // Ref chip toggle
+  const refChip = document.getElementById('refChip');
+  const refUploadArea = document.getElementById('refUploadArea');
+  refChip.addEventListener('click', () => {
+    refChip.classList.toggle('active');
+    refUploadArea.classList.toggle('visible');
+  });
+
+  // Remove ref image
+  document.getElementById('refRemove').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('refEmpty').style.display = '';
+    document.getElementById('refPreview').style.display = 'none';
+    document.getElementById('refImg').src = '';
+    refChip.classList.remove('active');
+    refUploadArea.classList.remove('visible');
+  });
+
+  // Top chip selection
+  document.querySelectorAll('.top-chip').forEach(chip => {
+    if (!chip.classList.contains('ref-chip')) {
+      const lbl = chip.querySelector('.lbl')?.textContent;
+      if (lbl) {
+        chip.addEventListener('click', () => {
+          document.querySelectorAll(`.top-chip .lbl`).forEach(l => {
+            if (l.textContent === lbl) {
+              document.querySelectorAll(`.top-chip`).forEach(c => {
+                if (c.querySelector('.lbl')?.textContent === lbl) c.classList.remove('active');
+              });
+            }
+          });
+          chip.classList.add('active');
+        });
+      }
+    }
+  });
+
+  // Char count
+  document.getElementById('promptTa').addEventListener('input', (e) => {
+    document.getElementById('charCount').textContent = e.target.value.length + ' / 1000';
+  });
+</script>
 </body>
 </html>

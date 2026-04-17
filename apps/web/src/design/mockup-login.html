@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 / 注册 — Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #08080f; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  /* Preview page bg hint */
+  .bg-hint { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+  .bg-hint-text { font-size: 12px; color: #334155; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* Modal overlay */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+
+  /* Modal */
+  .modal { width: 400px; max-width: 90vw; background: #13131f; border: 1px solid rgba(255,255,255,0.09); border-radius: 18px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04) inset; }
+
+  /* Modal header */
+  .modal-header { padding: 24px 24px 0; text-align: center; }
+  .modal-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(72,187,120,0.12); border: 1px solid rgba(72,187,120,0.2); border-radius: 20px; padding: 4px 10px; font-size: 10px; color: #48bb78; font-weight: 600; margin-bottom: 12px; }
+  .modal-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: #48bb78; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+  .modal-title { font-size: 20px; font-weight: 800; color: #e2e8f0; margin-bottom: 4px; }
+  .modal-sub { font-size: 12px; color: #475569; margin-bottom: 0; }
+  .modal-bonus { margin-top: 14px; padding: 10px 14px; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 10px; text-align: center; font-size: 11px; color: #818cf8; }
+  .modal-bonus strong { color: #a5b4fc; font-weight: 700; }
+
+  /* Tab switcher */
+  .tab-bar { display: flex; margin: 16px 24px 0; background: rgba(255,255,255,0.03); border-radius: 10px; padding: 3px; gap: 3px; }
+  .tab-btn { flex: 1; padding: 7px 8px; border-radius: 8px; font-size: 12px; font-weight: 600; color: #475569; cursor: pointer; transition: all 0.2s; border: none; background: transparent; text-align: center; }
+  .tab-btn.active { background: rgba(255,255,255,0.07); color: #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+  .tab-btn:hover:not(.active) { color: #94a3b8; }
+
+  /* Modal body */
+  .modal-body { padding: 16px 24px 24px; }
+
+  /* Tab panels */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Form elements */
+  .field-label { display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .field-group { margin-bottom: 12px; }
+  .input-row { display: flex; gap: 8px; }
+  .input { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 9px; padding: 10px 13px; color: #e2e8f0; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+  .input::placeholder { color: #374151; }
+  .input:focus { border-color: rgba(99,102,241,0.45); background: rgba(99,102,241,0.05); }
+  .input-code { flex: 1; }
+  .send-code-btn { flex-shrink: 0; padding: 0 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 9px; color: #818cf8; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+  .send-code-btn:hover { border-color: rgba(99,102,241,0.35); background: rgba(99,102,241,0.08); }
+  .send-code-btn:disabled { color: #374151; cursor: not-allowed; border-color: rgba(255,255,255,0.05); }
+  .code-dots { display: flex; gap: 8px; justify-content: center; margin: 14px 0; }
+  .code-dot { width: 40px; height: 48px; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 9px; text-align: center; color: #e2e8f0; font-size: 18px; font-weight: 700; outline: none; transition: border-color 0.2s; }
+  .code-dot:focus { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.06); }
+  .code-dot.filled { border-color: rgba(99,102,241,0.3); background: rgba(99,102,241,0.06); }
+  .code-hint { text-align: center; font-size: 10px; color: #374151; margin-bottom: 12px; }
+
+  /* Primary button */
+  .primary-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(99,102,241,0.35); transition: all 0.2s; margin-top: 4px; }
+  .primary-btn:hover { box-shadow: 0 6px 22px rgba(99,102,241,0.5); transform: translateY(-1px); }
+  .primary-btn:active { transform: translateY(0); }
+
+  /* Divider */
+  .divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; }
+  .divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+  .divider-text { font-size: 10px; color: #374151; white-space: nowrap; }
+
+  /* OAuth buttons */
+  .oauth-btn { width: 100%; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); border-radius: 10px; color: #e2e8f0; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.15s; margin-bottom: 8px; }
+  .oauth-btn:last-child { margin-bottom: 0; }
+  .oauth-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); }
+  .oauth-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; }
+  .google-icon { width: 18px; height: 18px; }
+  .apple-icon { width: 16px; height: 18px; }
+
+  /* Footer */
+  .modal-footer { text-align: center; padding: 14px 24px 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+  .modal-footer-text { font-size: 10px; color: #334155; line-height: 1.6; }
+  .modal-footer-text a { color: #475569; text-decoration: none; }
+  .modal-footer-text a:hover { color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<!-- Preview hint -->
+<div class="bg-hint">
+  <div class="bg-hint-text">登录弹窗 Mockup — 点击页面查看交互</div>
+</div>
+
+<!-- Modal overlay (always shown in preview) -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-badge">
+        <div class="modal-badge-dot"></div>
+        首次登录赠送体验金
+      </div>
+      <div class="modal-title">登录 / 注册</div>
+      <div class="modal-sub">选择任意方式快速开始</div>
+      <div class="modal-bonus">
+        🎁 首次登录即送 <strong>¥5.00</strong> 体验金，可用于图片/视频/语音生成
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="phone">📱 手机号</button>
+      <button class="tab-btn" data-tab="email">✉️ 邮箱</button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+
+      <!-- Phone tab -->
+      <div class="tab-panel active" id="phone-panel">
+        <div class="field-group">
+          <label class="field-label">手机号</label>
+          <div class="input-row">
+            <input class="input" type="tel" id="phoneInput" placeholder="请输入手机号" maxlength="11">
+          </div>
+        </div>
+
+        <!-- Send code -->
+        <button class="send-code-btn" id="sendCodeBtn" onclick="sendCode()">发送验证码</button>
+
+        <!-- Code input (shown after send) -->
+        <div id="codeSection" style="display:none;">
+          <div class="code-hint" id="codeHint">验证码已发送至 <strong id="phoneDisplay"></strong></div>
+          <div class="code-dots">
+            <input class="code-dot" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="code1" oninput="handleCodeInput(this, 1)">
+            <input class="code-dot" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="code2" oninput="handleCodeInput(this, 2)">
+            <input class="code-dot" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="code3" oninput="handleCodeInput(this, 3)">
+            <input class="code-dot" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="code4" oninput="handleCodeInput(this, 4)">
+            <input class="code-dot" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="code5" oninput="handleCodeInput(this, 5)">
+            <input class="code-dot" type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" id="code6" oninput="handleCodeInput(this, 6)">
+          </div>
+          <button class="primary-btn" id="phoneLoginBtn" onclick="phoneLogin()">验证并登录</button>
+          <div style="text-align:center;margin-top:10px;">
+            <span class="code-hint" style="display:inline;font-size:10px;">收不到？</span>
+            <button style="background:none;border:none;color:#818cf8;font-size:10px;cursor:pointer;font-weight:600;padding:0 2px;" onclick="sendCode()">重新发送</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email tab -->
+      <div class="tab-panel" id="email-panel">
+        <div class="field-group">
+          <label class="field-label">邮箱</label>
+          <input class="input" type="email" id="emailInput" placeholder="请输入邮箱地址">
+        </div>
+        <div class="field-group">
+          <label class="field-label">密码</label>
+          <input class="input" type="password" id="passwordInput" placeholder="请输入密码（至少 8 位）">
+        </div>
+        <button class="primary-btn" id="emailLoginBtn" onclick="emailLogin()">登录 / 注册</button>
+        <div style="text-align:right;margin-top:8px;">
+          <button style="background:none;border:none;color:#818cf8;font-size:10px;cursor:pointer;font-weight:600;">忘记密码？</button>
+        </div>
+      </div>
+
+      <!-- OAuth divider -->
+      <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-text">其他方式</div>
+        <div class="divider-line"></div>
+      </div>
+
+      <!-- OAuth buttons -->
+      <button class="oauth-btn" id="googleBtn" onclick="googleLogin()">
+        <span class="oauth-icon">
+          <svg class="google-icon" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/>
+            <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.909-2.259c-.806.54-1.837.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
+            <path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/>
+            <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
+          </svg>
+        </span>
+        使用 Google 账号登录
+      </button>
+      <button class="oauth-btn" id="appleBtn" onclick="appleLogin()">
+        <span class="oauth-icon">
+          <svg class="apple-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="#fff">
+            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+          </svg>
+        </span>
+        使用 Apple ID 登录
+      </button>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <div class="modal-footer-text">
+        登录即表示同意 <a href="#">《服务条款》</a> 和 <a href="#">《隐私政策》</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById(tab + '-panel').classList.add('active');
+    });
+  });
+
+  // Send code
+  let countdown = 0;
+  let countdownTimer = null;
+
+  function sendCode() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    if (!phone || phone.length < 11) {
+      alert('请输入正确的 11 位手机号');
+      return;
+    }
+    document.getElementById('codeSection').style.display = '';
+    document.getElementById('phoneDisplay').textContent = phone;
+    document.getElementById('sendCodeBtn').style.display = 'none';
+
+    countdown = 60;
+    const sendBtn = document.getElementById('sendCodeBtn');
+    sendBtn.style.display = '';
+    sendBtn.disabled = true;
+
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      countdown--;
+      sendBtn.textContent = countdown + 's 后重发';
+      if (countdown <= 0) {
+        clearInterval(countdownTimer);
+        sendBtn.disabled = false;
+        sendBtn.textContent = '重新发送';
+      }
+    }, 1000);
+
+    // Auto-focus first code input
+    document.getElementById('code1').focus();
+  }
+
+  // Code digit input
+  function handleCodeInput(input, idx) {
+    const val = input.value.replace(/\D/g, '');
+    input.value = val;
+    if (val) {
+      input.classList.add('filled');
+      if (idx < 6) {
+        document.getElementById('code' + (idx + 1)).focus();
+      }
+    } else {
+      input.classList.remove('filled');
+    }
+  }
+
+  // Phone login
+  function phoneLogin() {
+    const code = Array.from({length: 6}, (_, i) => document.getElementById('code' + (i+1)).value).join('');
+    if (code.length < 6) {
+      alert('请输入完整的 6 位验证码');
+      return;
+    }
+    const btn = document.getElementById('phoneLoginBtn');
+    btn.textContent = '验证中…';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = '✓ 登录成功';
+      btn.style.background = 'linear-gradient(135deg, #48bb78, #68d391)';
+    }, 1500);
+  }
+
+  // Email login
+  function emailLogin() {
+    const email = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+    if (!email || !password) {
+      alert('请填写邮箱和密码');
+      return;
+    }
+    const btn = document.getElementById('emailLoginBtn');
+    btn.textContent = '登录中…';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.textContent = '✓ 登录成功';
+      btn.style.background = 'linear-gradient(135deg, #48bb78, #68d391)';
+    }, 1500);
+  }
+
+  // OAuth (simulate)
+  function googleLogin() {
+    const btn = document.getElementById('googleBtn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span style="color:#48bb78;font-size:12px;">⏳ 跳转 Google…</span>';
+    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  }
+  function appleLogin() {
+    const btn = document.getElementById('appleBtn');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<span style="color:#48bb78;font-size:12px;">⏳ 跳转 Apple…</span>';
+    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+  }
+
+  // Click outside to close (in real app)
+  document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modalOverlay')) {
+      // Would close modal in real app
+    }
+  });
+</script>
+
+</body>
+</html>
