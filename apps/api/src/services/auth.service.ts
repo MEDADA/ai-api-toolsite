@@ -161,6 +161,79 @@ export const authService = {
     };
   },
 
+  /** Dev test login — creates or uses a test user, returns real JWT */
+  async testLogin(requestId: string): Promise<ServiceResult & {
+    first_login?: boolean;
+    user?: Record<string, unknown>;
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+  }> {
+    const testPhone = '13800000000';
+    let user = await prisma.user.findUnique({ where: { phone: testPhone } });
+    let firstLogin = false;
+
+    if (!user) {
+      firstLogin = true;
+      user = await prisma.user.create({
+        data: {
+          phone: testPhone,
+          nickname: '测试用户',
+          level: 'NORMAL',
+          gift_credit: false,
+          wallet: {
+            create: {
+              available_balance: 0,
+              frozen_balance: 0,
+              total_recharged: 0,
+              total_spent: 0,
+            },
+          },
+        },
+        include: { wallet: true },
+      });
+      // Issue gift credit (5元 = 500分)
+      if (user.wallet) {
+        await prisma.walletAccount.update({
+          where: { user_id: user.id },
+          data: {
+            available_balance: { increment: GIFT_CREDIT_AMOUNT },
+            total_recharged: { increment: GIFT_CREDIT_AMOUNT },
+          },
+        });
+        await prisma.walletLedger.create({
+          data: {
+            wallet_id: user.wallet.id,
+            user_id: user.id,
+            tx_type: 'GIFT_CREDIT',
+            amount: GIFT_CREDIT_AMOUNT,
+            balance_before: 0,
+            balance_after: GIFT_CREDIT_AMOUNT,
+            remark: '注册赠送5元体验金',
+          },
+        });
+        await prisma.user.update({ where: { id: user.id }, data: { gift_credit: true } });
+      }
+    }
+
+    const accessToken = await signAccessToken(user.id, user.level);
+    const refreshToken = await signRefreshToken(user.id);
+
+    return {
+      ok: true,
+      first_login: firstLogin,
+      user: {
+        id: user.id,
+        phone: maskPhone(testPhone),
+        level: user.level,
+        gift_credit: user.gift_credit,
+      },
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: 7200,
+    };
+  },
+
   /**
    * Verify the code from Redis/in-memory store.
    */

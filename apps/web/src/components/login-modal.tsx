@@ -12,7 +12,7 @@ interface LoginModalProps {
 type Tab = 'phone' | 'email' | 'google' | 'apple';
 
 export function LoginModal({ onClose }: LoginModalProps) {
-  const { login, sendCode } = useAuth();
+  const { login, sendCode, testLogin } = useAuth();
   const { success, error } = useToast();
   const t = useTranslations('login');
   const tToast = useTranslations('toast');
@@ -55,8 +55,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
           return c - 1;
         });
       }, 1000);
-    } catch (e) {
-      error((e as Error).message || tToast('sendFailed'));
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { reason?: string }; message?: string }; message?: string };
+      error(err.response?.data?.reason || err.response?.message || err.message || tToast('sendFailed'));
     } finally {
       setLoading(false);
     }
@@ -73,8 +74,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
       success(tToast('loginSuccess'));
       setShowBonus(true);
       setTimeout(() => { onClose(); }, 2500);
-    } catch (e) {
-      error(tToast('loginFailed'));
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { reason?: string }; message?: string }; message?: string };
+      error(err.response?.data?.reason || err.response?.message || err.message || tToast('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -625,6 +627,21 @@ export function LoginModal({ onClose }: LoginModalProps) {
             {activeTab === 'google' && renderGoogleLogin()}
             {activeTab === 'apple' && renderAppleLogin()}
           </div>
+
+          {/* Dev: skip verification */}
+          <button
+            style={{
+              marginTop: 12, width: '100%', padding: '9px 0',
+              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)',
+              borderRadius: 10, color: '#6366f1', fontSize: 13, cursor: 'pointer',
+            }}
+            onClick={async () => {
+              await testLogin();
+              onClose();
+            }}
+          >
+            ⚡ 跳过验证直接登录（测试用）
+          </button>
 
           {/* Footer hint */}
           {!showBonus && (

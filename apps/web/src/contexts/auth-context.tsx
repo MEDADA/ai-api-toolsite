@@ -27,6 +27,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (phone: string, code: string) => Promise<LoginResult>;
   sendCode: (phone: string) => Promise<void>;
+  testLogin: () => Promise<void>;
   logout: () => void;
   refetchBalance: () => Promise<void>;
   refetchProfile: () => Promise<void>;
@@ -125,7 +126,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const sendCode = useCallback(async (phone: string) => {
-    await apiClient.auth.sendCode(phone);
+    return await apiClient.auth.sendCode(phone);
+  }, []);
+
+  // Test login — calls real API test-login endpoint (dev only)
+  const testLogin = useCallback(async () => {
+    const result = await apiClient.auth.testLogin();
+    if (!result.ok) throw new Error('Test login failed');
+    apiClient.setAuthToken(result.access_token);
+    setToken(result.access_token);
+    setUser(result.user as UserInfo);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TOKEN_KEY, result.access_token);
+      localStorage.setItem(REFRESH_KEY, (result as { refresh_token?: { token: string } }).refresh_token?.token ?? '');
+      localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+    }
+    // Fetch real balance
+    const balanceData = await apiClient.wallet.getBalance();
+    setBalance(balanceData);
   }, []);
 
   const logout = useCallback(() => {
@@ -167,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         sendCode,
+        testLogin,
         logout,
         refetchBalance,
         refetchProfile,

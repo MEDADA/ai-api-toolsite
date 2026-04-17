@@ -53,6 +53,14 @@ export async function authRoutes(fastify: FastifyInstance) {
     return reply.send(result);
   });
 
+  // ── POST /api/v1/auth/test-login (dev only) ─────────────────────
+  if (env.NODE_ENV === 'development') {
+    fastify.post('/test-login', async (req: FastifyRequest, reply: FastifyReply) => {
+      const result = await authService.testLogin(req.requestId);
+      return reply.send(result);
+    });
+  }
+
   // ── POST /api/v1/auth/logout ─────────────────────────────────────
   fastify.post('/logout', async (req: FastifyRequest, reply: FastifyReply) => {
     const authHeader = req.headers.authorization ?? '';
