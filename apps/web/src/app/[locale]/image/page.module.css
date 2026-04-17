@@ -406,6 +406,20 @@
   .promptBox {
     border-radius: 12px 12px 0 0;
   }
+
+  /* Video page mobile controls */
+  .modelSelector .modelPill {
+    padding: 4px 8px;
+  }
+  .modelSelector .modelPill .modelPillName {
+    font-size: 10px;
+  }
+  .chip {
+    padding: 4px 8px;
+  }
+  .topBar > div:last-child .chip:last-child {
+    margin-right: 0 !important;
+  }
 }
 
 

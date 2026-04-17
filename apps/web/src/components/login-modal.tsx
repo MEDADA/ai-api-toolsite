@@ -255,7 +255,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
     borderRadius: 10,
     padding: 4,
     marginBottom: 28,
-    gap: 2,
+    gap: 0,
   };
 
   const tabClass = (key: Tab) => activeTab === key ? 'login-modal-tab login-modal-tab-active' : 'login-modal-tab';
@@ -383,7 +383,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
     fontSize: 26,
     textAlign: 'center',
     letterSpacing: 12,
-    padding: '14px 14px',
+    padding: '14px 16px 14px 14px',
     fontWeight: 700,
     fontFamily: 'monospace',
   };
@@ -1071,7 +1071,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           {!showBonus && (
             <p style={{
               textAlign: 'center', marginTop: 20,
-              color: '#334155', fontSize: 11.5, lineHeight: 1.6,
+              color: 'rgba(255,255,255,0.5)', fontSize: 11.5, lineHeight: 1.6,
             }}>
               {t('footerHint')}
             </p>
