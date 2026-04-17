@@ -3,6 +3,8 @@ import styles from '../image/page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { apiClient } from '@/lib/api-client';
 
 const MODELS = [
   { id: 'seedance', icon: '🎬', name: 'Seedance 1.5 Pro', desc: '高质量 · 中文理解强', price: '¥1.5/秒' },
@@ -21,6 +23,7 @@ interface HistoryItem {
 export default function VideoPage() {
   const t = useTranslations('video');
   const locale = useLocale();
+  const { isLoggedIn } = useAuth();
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -69,8 +72,7 @@ export default function VideoPage() {
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim() || isGenerating) return;
 
-    const token = localStorage.getItem('access_token');
-    if (!token) { alert('请先登录'); return; }
+    if (!isLoggedIn) { alert('请先登录'); return; }
 
     const tempId = `temp_${Date.now()}`;
     const durationSec = [5, 10, 15][duration];
@@ -83,28 +85,18 @@ export default function VideoPage() {
     setIsGenerating(true);
 
     try {
-      const body: Record<string, unknown> = {
+      const result = await apiClient.tasks.create({
         model_slug: 'doubao-seedance-1.5-pro',
         prompt,
-        duration: durationSec,
+        duration: String(durationSec),
         resolution: RESOLUTIONS[resolution],
-      };
-      if (initImage) {
-        body.init_image = initImage;
-      }
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/tasks/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
+        init_image: initImage || undefined,
       });
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.message || '创建任务失败');
 
-      const { task_id, stream_url } = json.data;
-      const actualStreamUrl = `${process.env.NEXT_PUBLIC_API_URL}${stream_url}`;
+      const { task_id } = result;
 
-      const es = new EventSource(actualStreamUrl);
+      // Connect to SSE stream using apiClient
+      const es = apiClient.tasks.getStream(task_id);
 
       es.addEventListener('task_processing', () => {
         setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '排队中…', progress: 5 } : h));

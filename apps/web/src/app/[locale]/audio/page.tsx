@@ -3,6 +3,8 @@ import styles from '../image/page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { apiClient } from '@/lib/api-client';
 
 const MODES = [
   { id: 'tts', icon: '🎙️', name: 'TTS 文字转语音', desc: '文字转语音，支持多种音色' },
@@ -46,6 +48,7 @@ function Waveform() {
 export default function AudioPage() {
   const t = useTranslations('audio');
   const locale = useLocale();
+  const { isLoggedIn } = useAuth();
   const [modeIdx, setModeIdx] = useState(0);
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0]);
   const [voiceDropdownOpen, setVoiceDropdownOpen] = useState(false);
@@ -68,9 +71,7 @@ export default function AudioPage() {
 
   const handleGenerate = useCallback(async () => {
     if (!text.trim() || isGenerating) return;
-
-    const token = localStorage.getItem('access_token');
-    if (!token) { alert('请先登录'); return; }
+    if (!isLoggedIn) { alert('请先登录'); return; }
 
     const tempId = `temp_${Date.now()}`;
     const modeId = MODES[modeIdx]!.id;
@@ -87,26 +88,17 @@ export default function AudioPage() {
     setIsGenerating(true);
 
     try {
-      const body: Record<string, unknown> = {
+      const result = await apiClient.tasks.create({
         type: modeId,
         prompt: text,
         model: selectedVoice,
         speed,
         language: LANGUAGES[language],
-      };
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/tasks/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
       });
-      const json = await res.json();
-      if (!json.ok) throw new Error(json.message || '创建任务失败');
 
-      const { task_id, stream_url } = json.data;
-      const actualStreamUrl = `${process.env.NEXT_PUBLIC_API_URL}${stream_url}?token=${token}`;
+      const { task_id } = result;
 
-      const es = new EventSource(actualStreamUrl);
+      const es = apiClient.tasks.getStream(task_id);
 
       es.addEventListener('task_processing', () => {
         setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '处理中…' } : h));
