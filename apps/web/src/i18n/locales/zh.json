@@ -201,7 +201,22 @@
     "loggingIn": "登录中...",
     "resendCode": "重新发送验证码",
     "resendAfter": "{seconds}秒后可重新发送",
-    "cancel": "取消"
+    "cancel": "取消",
+    "tabPhone": "手机号",
+    "tabEmail": "邮箱",
+    "tabGoogle": "Google",
+    "tabApple": "Apple",
+    "titleEmail": "邮箱登录",
+    "titleOAuth": "第三方登录",
+    "passwordPlaceholder": "请输入密码",
+    "loginBtn": "登录 / 注册",
+    "googleBtn": "使用 Google 账号登录",
+    "appleBtn": "使用 Apple ID 登录",
+    "brand": "AI 工具站",
+    "tagline": "AI 创作，一触即达",
+    "footerHint": "登录即表示同意《用户协议》和《隐私政策》",
+    "bonusTitle": "🎉 赠送 ¥5 体验金！",
+    "bonusDesc": "首次登录赠送体验金，快去体验吧"
   },
   "toast": {
     "needLogin": "请先登录",

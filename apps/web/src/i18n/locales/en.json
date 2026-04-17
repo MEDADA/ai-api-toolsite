@@ -201,7 +201,22 @@
     "loggingIn": "Logging in...",
     "resendCode": "Resend Code",
     "resendAfter": "Resend in {seconds}s",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "tabPhone": "Phone",
+    "tabEmail": "Email",
+    "tabGoogle": "Google",
+    "tabApple": "Apple",
+    "titleEmail": "Email Login",
+    "titleOAuth": "Sign in with",
+    "passwordPlaceholder": "Enter password",
+    "loginBtn": "Login / Register",
+    "googleBtn": "Continue with Google",
+    "appleBtn": "Sign in with Apple",
+    "brand": "AI Toolsite",
+    "tagline": "AI Creation at Your Fingertips",
+    "footerHint": "By logging in, you agree to our Terms of Service and Privacy Policy",
+    "bonusTitle": "🎉 ¥5 Free Credit!",
+    "bonusDesc": "New user bonus — start creating now"
   },
   "toast": {
     "needLogin": "Please login first",
