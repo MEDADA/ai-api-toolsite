@@ -2,7 +2,7 @@
 import styles from '../image/page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useLocale, useTranslations } from 'next-intl';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 const MODES = [
   { id: 'tts', icon: '🎙️', name: 'TTS 文字转语音', desc: '文字转语音，支持多种音色' },
@@ -12,16 +12,26 @@ const MODES = [
 const VOICES = ['晓晓（女声）', '云飞（男声）', '小宁（儿童）', '阿波（低沉）'];
 const LANGUAGES = ['中文', '英文', '中日', '中英'];
 
-const HISTORY = [
-  { id: '1', type: 'TTS · 晓晓', text: '欢迎使用 AI 语音合成服务，支持多种音色和语言切换', time: '刚刚', duration: '12s', playing: false },
-  { id: '2', type: 'TTS · 云飞', text: 'The future of AI content creation is here', time: '5 分钟前', duration: '8s', playing: false },
-  { id: '3', type: '声音克隆', text: '这是一段用你声音克隆生成的语音内容', time: '20 分钟前', duration: '15s', playing: false },
+interface AudioHistoryItem {
+  id: string;
+  type: string;
+  text: string;
+  time: string;
+  duration: string;
+  playing?: boolean;
+  audioUrl?: string;
+  status?: 'generating' | 'completed' | 'failed';
+}
+
+const INITIAL_HISTORY: AudioHistoryItem[] = [
+  { id: '1', type: 'TTS · 晓晓', text: '欢迎使用 AI 语音合成服务，支持多种音色和语言切换', time: '刚刚', duration: '12s', audioUrl: '', status: 'completed' },
+  { id: '2', type: 'TTS · 云飞', text: 'The future of AI content creation is here', time: '5 分钟前', duration: '8s', audioUrl: '', status: 'completed' },
+  { id: '3', type: '声音克隆', text: '这是一段用你声音克隆生成的语音内容', time: '20 分钟前', duration: '15s', audioUrl: '', status: 'completed' },
 ];
 
 function Waveform() {
   const [bars, setBars] = useState<number[]>([]);
   useEffect(() => {
-    // Generate bars only on client to avoid SSR/hydration mismatch
     setBars(Array.from({ length: 40 }, () => Math.random() * 30 + 5));
   }, []);
   return (
@@ -43,7 +53,7 @@ export default function AudioPage() {
   const [speed, setSpeed] = useState(1.0);
   const [text, setText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [history, setHistory] = useState(HISTORY);
+  const [history, setHistory] = useState<AudioHistoryItem[]>(INITIAL_HISTORY);
   const voiceDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,12 +66,85 @@ export default function AudioPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleGenerate = async () => {
+  const handleGenerate = useCallback(async () => {
     if (!text.trim() || isGenerating) return;
+
+    const token = localStorage.getItem('access_token');
+    if (!token) { alert('请先登录'); return; }
+
+    const tempId = `temp_${Date.now()}`;
+    const modeId = MODES[modeIdx]!.id;
+
+    const genCard: AudioHistoryItem = {
+      id: tempId,
+      type: `${modeId.toUpperCase()} · ${selectedVoice}`,
+      text,
+      time: '生成中…',
+      duration: '—',
+      status: 'generating',
+    };
+    setHistory(prev => [genCard, ...prev]);
     setIsGenerating(true);
-    await new Promise(r => setTimeout(r, 3000));
-    setIsGenerating(false);
-  };
+
+    try {
+      const body: Record<string, unknown> = {
+        type: modeId,
+        prompt: text,
+        model: selectedVoice,
+        speed,
+        language: LANGUAGES[language],
+      };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/tasks/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || '创建任务失败');
+
+      const { task_id, stream_url } = json.data;
+      const actualStreamUrl = `${process.env.NEXT_PUBLIC_API_URL}${stream_url}?token=${token}`;
+
+      const es = new EventSource(actualStreamUrl);
+
+      es.addEventListener('task_processing', () => {
+        setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '处理中…' } : h));
+      });
+
+      es.addEventListener('task_completed', (e) => {
+        const data = JSON.parse(e.data);
+        const audioUrl = data.outputs?.[0]?.url || '';
+        const duration = data.outputs?.[0]?.duration || '—';
+        setHistory(prev => prev.map(h => h.id === tempId ? {
+          ...h,
+          id: task_id,
+          audioUrl,
+          duration: typeof duration === 'number' ? `${duration}s` : duration,
+          status: 'completed',
+          time: '刚刚',
+        } : h));
+        setIsGenerating(false);
+        es.close();
+      });
+
+      es.addEventListener('task_failed', (e) => {
+        const data = JSON.parse(e.data);
+        setHistory(prev => prev.filter(h => h.id !== tempId));
+        setIsGenerating(false);
+        alert(`生成失败: ${data.error}`);
+        es.close();
+      });
+
+      es.onerror = () => { es.close(); setIsGenerating(false); };
+
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '生成失败';
+      setHistory(prev => prev.filter(h => h.id !== tempId));
+      setIsGenerating(false);
+      alert(msg);
+    }
+  }, [text, isGenerating, modeIdx, selectedVoice, speed, language, LANGUAGES]);
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -216,7 +299,10 @@ export default function AudioPage() {
             {history.map(item => (
               <div key={item.id} className={styles.audioCard}>
                 <div className={styles.audioPlayer}>
-                  <button className={styles.playBtn}>▶</button>
+                  <button className={styles.playBtn}
+                    onClick={() => { if (item.audioUrl) window.open(item.audioUrl, '_blank'); }}>
+                    ▶
+                  </button>
                   <Waveform />
                   <span className={styles.audioDuration}>{item.duration}</span>
                 </div>
@@ -227,7 +313,11 @@ export default function AudioPage() {
                 <div className={styles.audioFooter}>
                   <span className={styles.audioTime}>{item.time}</span>
                   <div className={styles.audioActions}>
-                    <button className={styles.audioAct}>⬇ {t('downloadFile')}</button>
+                    {item.audioUrl && (
+                      <button className={styles.audioAct} onClick={() => window.open(item.audioUrl, '_blank')}>
+                        ⬇ {t('downloadFile')}
+                      </button>
+                    )}
                     <button className={styles.audioAct}>⭐</button>
                   </div>
                 </div>

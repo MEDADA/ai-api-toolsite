@@ -15,7 +15,7 @@ const PLACEHOLDER = '描述你想要的视频场景… 例如：无人机穿越�
 
 interface HistoryItem {
   id: string; model: string; prompt: string; time: string;
-  img: string; status?: 'generating' | 'completed';
+  img: string; status?: 'generating' | 'completed'; progress?: number;
 }
 
 export default function VideoPage() {
@@ -77,7 +77,7 @@ export default function VideoPage() {
 
     const genCard: HistoryItem = {
       id: tempId, model: selectedModel!.name, prompt,
-      time: '生成中…', img: '', status: 'generating',
+      time: '生成中…', img: '', status: 'generating', progress: 0,
     };
     setHistory(prev => [genCard, ...prev]);
     setIsGenerating(true);
@@ -93,7 +93,7 @@ export default function VideoPage() {
         body.init_image = initImage;
       }
 
-      const res = await fetch('http://localhost:3004/api/v1/tasks/generate', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/tasks/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
@@ -102,19 +102,29 @@ export default function VideoPage() {
       if (!json.ok) throw new Error(json.message || '创建任务失败');
 
       const { task_id, stream_url } = json.data;
-      const actualStreamUrl = `http://localhost:3004${stream_url}`;
+      const actualStreamUrl = `${process.env.NEXT_PUBLIC_API_URL}${stream_url}`;
 
       const es = new EventSource(actualStreamUrl);
 
       es.addEventListener('task_processing', () => {
-        setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '处理中…' } : h));
+        setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '排队中…', progress: 5 } : h));
+      });
+
+      es.addEventListener('task_progress', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          const pct = typeof data.progress === 'number' ? Math.round(data.progress * 100) : 0;
+          setHistory(prev => prev.map(h => h.id === tempId ? {
+            ...h, time: `生成中 ${pct}%`, progress: pct,
+          } : h));
+        } catch { /* ignore */ }
       });
 
       es.addEventListener('task_completed', (e) => {
         const data = JSON.parse(e.data);
         const videoUrl = data.outputs?.[0]?.url;
         setHistory(prev => prev.map(h => h.id === tempId ? {
-          ...h, id: task_id, img: videoUrl || '', status: 'completed', time: '刚刚',
+          ...h, id: task_id, img: videoUrl || '', status: 'completed', time: '刚刚', progress: 100,
         } : h));
         setIsGenerating(false);
         es.close();
