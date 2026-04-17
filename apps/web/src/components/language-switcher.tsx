@@ -1,29 +1,31 @@
 'use client';
 
-import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 
+function getLocaleFromPathname(pathname: string): 'zh' | 'en' {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length > 0 && routing.locales.includes(segments[0] as 'zh' | 'en')) {
+    return segments[0] as 'zh' | 'en';
+  }
+  return 'zh'; // default
+}
+
 export function LanguageSwitcher() {
-  const locale = useLocale();
-  const t = useTranslations('nav');
   const router = useRouter();
   const pathname = usePathname();
-
-  const otherLocale = locale === 'zh' ? 'en' : 'zh';
-  const otherLabel = locale === 'zh' ? 'EN' : '中文';
+  const currentLocale = getLocaleFromPathname(pathname);
+  const otherLocale = currentLocale === 'zh' ? 'en' : 'zh';
+  const otherLabel = currentLocale === 'zh' ? 'EN' : '中文';
 
   const handleSwitch = () => {
-    // localePrefix: 'as-needed' means zh has no URL prefix, en shows '/en'
-    const segments = pathname.split('/').filter(Boolean); // ['zh', 'image'] or ['image']
+    const segments = pathname.split('/').filter(Boolean);
     const isFirstSegmentLocale = routing.locales.includes(segments[0] as 'zh' | 'en');
     let newPath: string;
     if (isFirstSegmentLocale) {
-      // Replace existing locale in URL
       segments[0] = otherLocale;
       newPath = '/' + segments.join('/');
     } else {
-      // No locale prefix yet (default zh), prepend 'en' for English
       newPath = otherLocale === 'en' ? `/${otherLocale}${pathname}` : pathname;
     }
     router.push(newPath);

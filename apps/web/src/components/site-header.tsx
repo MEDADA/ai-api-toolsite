@@ -3,18 +3,27 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useTranslations, useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/auth-context';
 import { LoginModal } from './login-modal';
 import { LanguageSwitcher } from './language-switcher';
+import { routing } from '@/i18n/routing';
+
+function getLocaleFromPathname(pathname: string): 'zh' | 'en' {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length > 0 && routing.locales.includes(segments[0] as 'zh' | 'en')) {
+    return segments[0] as 'zh' | 'en';
+  }
+  return 'zh';
+}
 
 export function SiteHeader() {
   const { isLoggedIn, user, balance, logout } = useAuth();
   const t = useTranslations('nav');
   const tDashboard = useTranslations('dashboard');
-  const locale = useLocale();
   const pathname = usePathname();
-  // localePrefix: 'as-needed' means zh locale doesn't show in URL
+  const locale = getLocaleFromPathname(pathname);
+  // localePrefix: 'as-needed' means zh has no URL prefix, en shows '/en'
   const L = (path: string) => locale === 'zh' ? path : `/${locale}${path}`;
   const [showLogin, setShowLogin] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
