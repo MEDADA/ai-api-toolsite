@@ -24,7 +24,7 @@ export function SiteHeader() {
   const pathname = usePathname();
   const locale = getLocaleFromPathname(pathname);
   // localePrefix: 'as-needed' means zh has no URL prefix, en shows '/en'
-  const L = (path: string) => locale === 'zh' ? path : `/${locale}${path}`;
+  const L = (path: string) => `/${locale}${path}`;
   const [showLogin, setShowLogin] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -140,8 +140,8 @@ export function SiteHeader() {
                     >
                       {[
                         { href: L('/dashboard'), label: `📊 ${tDashboard('tab.history')}` },
-                        { href: '/dashboard?tab=balance', label: '💰 ' + tDashboard('tab.balance') },
-                        { href: '/dashboard?tab=favorites', label: '⭐ ' + tDashboard('tab.favorites') },
+                        { href: L('/dashboard?tab=balance'), label: '💰 ' + tDashboard('tab.balance') },
+                        { href: L('/dashboard?tab=favorites'), label: '⭐ ' + tDashboard('tab.favorites') },
                       ].map((item) => (
                         <Link
                           key={item.href}
