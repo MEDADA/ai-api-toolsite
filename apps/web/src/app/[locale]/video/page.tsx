@@ -123,10 +123,10 @@ export default function VideoPage() {
       const result = await apiClient.tasks.create({
         model_slug: 'doubao-seedance-1.5-pro',
         prompt,
-        duration: String(durationSec),
-        resolution: RESOLUTIONS[resolution],
-        init_image: initImage || undefined,
-      });
+        duration: durationSec,
+        resolution: RESOLUTIONS[resolution] as '540p' | '720p' | '1080p' | '4K',
+        reference_image_url: initImage || undefined,
+      } as any);
 
       const task_id = result.task_id;
       setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '排队中…', progress: 5 } : h));
