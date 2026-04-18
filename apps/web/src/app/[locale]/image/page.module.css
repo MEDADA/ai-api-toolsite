@@ -267,7 +267,7 @@
   color: #818cf8;
   margin-bottom: 4px;
 }
-.historyPrompt { font-size: 10px; color: #475569; line-height: 1.45; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* removed */
 .historyCardFooter { display: flex; align-items: center; justify-content: space-between; padding: 6px 11px; border-top: 1px solid rgba(255,255,255,0.04); }
 .historyTime { font-size: 9px; color: #334155; }
 .historyActions { display: flex; gap: 3px; }

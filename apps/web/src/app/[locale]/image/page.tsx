@@ -4,6 +4,7 @@ import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useTranslations, useLocale } from 'next-intl';
 import { useState, useRef, useEffect } from 'react';
+import { LightboxModal } from '@/components/lightbox-modal';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
@@ -85,6 +86,7 @@ export default function ImagePage() {
   const [filter, setFilter] = useState('all');
   const [genProgress, setGenProgress] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -178,6 +180,7 @@ export default function ImagePage() {
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
       <SiteHeader />
+      {lightboxSrc && <LightboxModal src={lightboxSrc} alt="生成结果" onClose={() => setLightboxSrc(null)} />}
       {/* Mobile: history toggle button */}
       <button
         className={styles.historyToggle}
@@ -312,10 +315,9 @@ export default function ImagePage() {
           <div className={styles.historyGrid}>
             {filtered.map(item => (
               <div key={item.id} className={styles.historyCard}>
-                <img className={styles.historyImg} src={item.img} alt={item.prompt} loading="lazy" />
+                <img className={styles.historyImg} src={item.img} alt={item.prompt} loading="lazy" onClick={() => setLightboxSrc(item.img)} style={{ cursor: "zoom-in" }} />
                 <div className={styles.historyCardBody}>
                   <span className={styles.historyModelTag}>{item.model}</span>
-                  <p className={styles.historyPrompt}>{item.prompt}</p>
                 </div>
                 <div className={styles.historyCardFooter}>
                   <span className={styles.historyTime}>{item.time}</span>
