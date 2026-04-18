@@ -70,6 +70,17 @@ export default function VideoPage() {
     }).catch(() => {});
   }, [isLoggedIn]);
 
+  // Infinite scroll
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0]?.isIntersecting) setVisibleCount(v => v + 20); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const { success, info, error: showError } = useToast();
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -82,7 +93,14 @@ export default function VideoPage() {
   const [filter, setFilter] = useState<'all' | 'video' | 'fav'>('all');
   const [uploading, setUploading] = useState(false);
   const [showRefUpload, setShowRefUpload] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(20);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Filter history
+  const generatingItems = history.filter(h => h.status === 'generating');
+  const completedItems = filter === 'all' ? history.filter(h => h.status !== 'generating') : filter === 'video' ? history.filter(h => h.status !== 'generating') : [];
+  const filtered = [...generatingItems, ...completedItems].slice(0, visibleCount);
   const historyPanelRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -310,10 +328,7 @@ export default function VideoPage() {
             </div>
           </div>
           <div className={styles.historyGrid} ref={historyPanelRef}>
-            {(() => {
-              const generatingItems = history.filter(h => h.status === 'generating');
-              const completedItems = filter === 'all' ? history.filter(h => h.status !== 'generating') : filter === 'video' ? history.filter(h => h.status !== 'generating') : [];
-              return [...generatingItems, ...completedItems].map(item => (
+            {filtered.map(item =>
               item.status === 'generating' ? (
                 <div key={item.id} className={`${styles.historyCard} ${styles.generatingCard}`}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, background: 'rgba(99,102,241,0.06)', borderRadius: '10px 10px 0 0' }}>
@@ -380,8 +395,12 @@ export default function VideoPage() {
                   </div>
                 </div>
               )
-            ));
-            })()}
+            )}
+            {filtered.length < [...generatingItems, ...completedItems].length && (
+              <div ref={sentinelRef} style={{ textAlign: 'center', padding: '12px', color: '#64748b', fontSize: 12 }}>
+                加载更多
+              </div>
+            )}
           </div>
         </main>
       </div>

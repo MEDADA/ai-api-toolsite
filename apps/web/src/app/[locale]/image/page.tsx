@@ -120,10 +120,17 @@ export default function ImagePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filter, setFilter] = useState('all');
+  const [visibleCount, setVisibleCount] = useState(20);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [initImage, setInitImage] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Derived: filter history
+  const generating = history.filter(h => h.status === 'generating');
+  const completed = filter === 'fav' ? [] : history.filter(h => h.status !== 'generating' && h.tag === '图片');
+  const filtered = [...generating, ...completed];
 
   // Load history from API on mount
   useEffect(() => {
@@ -145,6 +152,17 @@ export default function ImagePage() {
       setHistory(items);
     }).catch(() => { /* ignore */ });
   }, [isLoggedIn]);
+
+  // Infinite scroll: load more when sentinel is visible
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0]?.isIntersecting) setVisibleCount(v => Math.min(v + 20, filtered.length)); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [filtered.length]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -263,9 +281,6 @@ export default function ImagePage() {
   };
 
   const imageCount = COUNTS[selectedCount] ?? 1;
-  const generating = history.filter(h => h.status === 'generating');
-  const completed = filter === 'fav' ? [] : history.filter(h => h.status !== 'generating' && h.tag === '图片');
-  const filtered = [...generating, ...completed];
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -484,7 +499,7 @@ export default function ImagePage() {
           <div className={styles.historyTopbar}>
             <div>
               <span className={styles.historyHeading}>{t('resultHistory')}</span>
-              <span className={styles.historyCount}>{history.length} {t('records')}</span>
+              <span className={styles.historyCount}>{filtered.length} {t('records')}</span>
             </div>
             <div className={styles.historyFilter}>
               {([t('filterAll'), t('filterImage'), t('filterFav')] as const).map((f, i) => {
@@ -495,7 +510,7 @@ export default function ImagePage() {
           </div>
 
           <div className={styles.historyGrid}>
-            {filtered.map(item => (
+            {filtered.slice(0, visibleCount).map(item => (
               item.status === 'generating' ? (
                 <div key={item.id} className={`${styles.historyCard} ${styles.generatingCard}`}>
                   <div className={styles.genPreview} style={{ gridTemplateColumns: imageCount > 1 ? `repeat(${Math.min(imageCount, 2)}, 1fr)` : '1fr' }}>
@@ -542,6 +557,16 @@ export default function ImagePage() {
                 </div>
               )
             ))}
+            {filtered.length > visibleCount && (
+              <div ref={sentinelRef} style={{ textAlign: 'center', padding: '12px', color: '#64748b', fontSize: 12 }}>
+                加载更多 ({filtered.length - visibleCount} 条)
+              </div>
+            )}
+            {filtered.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#475569', fontSize: 13 }}>
+                暂无生成记录，开始创作吧 ✨
+              </div>
+            )}
           </div>
         </main>
       </div>
