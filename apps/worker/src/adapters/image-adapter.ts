@@ -132,8 +132,9 @@ export function parseResponse(data: Record<string, unknown>): ParsedResult {
 export async function pollStatus(
   predictionId: string,
   apiKey: string,
-  baseUrl?: string
-): Promise<{ status: 'pending' | 'processing' | 'completed' | 'failed'; progress?: number; result?: ParsedResult }> {
+  baseUrl?: string,
+  totalSteps?: number
+): Promise<{ status: 'pending' | 'processing' | 'completed' | 'failed'; progress: number; result?: ParsedResult }> {
   const base = baseUrl ?? 'https://api.replicate.com';
   const resp = await fetch(`${base}/v1/predictions/${predictionId}`, {
     headers: {
@@ -149,16 +150,16 @@ export async function pollStatus(
   const data = await resp.json() as Record<string, unknown>;
   const status = data.status as string;
 
-  if (status === 'succeeded') return { status: 'completed', result: parseResponse(data) };
-  if (status === 'failed' || status === 'canceled') return { status: 'failed', result: parseResponse(data) };
+  if (status === 'succeeded') return { status: 'completed', progress: 100, result: parseResponse(data) };
+  if (status === 'failed' || status === 'canceled') return { status: 'failed', progress: 0, result: parseResponse(data) };
 
-  // Progress estimate from logs
-  const logs = data.urls as { stream?: string } | undefined;
-  void logs;
+  const sampleCount = data.metrics ? (data.metrics as Record<string, number>).sample_count : undefined;
+  const steps = totalSteps ?? 20;
+  const pct = sampleCount !== undefined ? Math.min(100, Math.round((sampleCount / steps) * 100)) : undefined;
 
   return {
     status: status === 'starting' ? 'pending' : 'processing',
-    progress: data.metrics ? (data.metrics as Record<string, number>).sample_count : undefined,
+    progress: pct ?? 50, // default to 50% if unknown
   };
 }
 

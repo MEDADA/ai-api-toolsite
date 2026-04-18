@@ -141,7 +141,10 @@ export default function VideoPage() {
       } as any);
 
       const task_id = result.task_id;
-      setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '排队中…', progress: 5 } : h));
+      const startTime = Date.now();
+      // Video generation time: ~10x video duration
+      const ESTIMATED_SECS = durationSec * 12;
+      setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '排队中…', progress: 3 } : h));
 
       // Poll task status every 2s
       const poll = setInterval(async () => {
@@ -149,9 +152,13 @@ export default function VideoPage() {
           const task = await apiClient.tasks.get(task_id);
           const st = task.status;
           if (st === 'PROCESSING' || st === 'QUEUED' || st === 'CREATED') {
-            const pct = st === 'PROCESSING' ? 50 : 10;
+            const elapsedSec = (Date.now() - startTime) / 1000;
+            const pct = Math.min(95, Math.round((elapsedSec / ESTIMATED_SECS) * 100));
+            const label = elapsedSec < 60
+              ? `生成中… ${Math.round(elapsedSec)}秒`
+              : `生成中… ${Math.round(elapsedSec / 60)}分`;
             setHistory(prev => prev.map(h => h.id === tempId ? {
-              ...h, time: '生成中…', progress: pct,
+              ...h, time: label, progress: pct,
             } : h));
           } else if (st === 'SUCCEEDED') {
             clearInterval(poll);
