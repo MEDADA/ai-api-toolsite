@@ -348,7 +348,7 @@ export default function ImagePage() {
               onClick={handleGenerate}
               disabled={!prompt.trim()}
             >
-              '🎨 ' + t('generate')
+              {'🎨 ' + t('generate')}
             </button>
           </div>
 
