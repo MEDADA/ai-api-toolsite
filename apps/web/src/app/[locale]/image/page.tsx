@@ -67,6 +67,16 @@ interface HistoryItem {
   tag: string;
 }
 
+function formatTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  return `${Math.floor(h / 24)} 天前`;
+}
+
 export default function ImagePage() {
   const t = useTranslations('image');
   const tf = useTranslations('footer');
@@ -87,6 +97,27 @@ export default function ImagePage() {
   const [genProgress, setGenProgress] = useState('');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load history from API on mount
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    apiClient.tasks.list({ page: 1, page_size: 50 }).then(res => {
+      const items: HistoryItem[] = (res.tasks || []).map((t) => {
+        const outputs = t.outputs || [];
+        const first = outputs[0] || {};
+        const inputParams = (t.input_params || {}) as { prompt?: string };
+        return {
+          id: t.id,
+          model: t.model_slug || '—',
+          prompt: inputParams.prompt || '',
+          time: formatTime(t.created_at),
+          img: (first as {url?:string}).url || '',
+          tag: '图片',
+        };
+      });
+      setHistory(items);
+    }).catch(() => { /* ignore */ });
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
