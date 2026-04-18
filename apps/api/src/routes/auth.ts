@@ -34,7 +34,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     const { phone, code } = parsed.data;
     const result = await authService.loginByCode(phone, code, req.requestId);
     if (!result.ok) {
-      const status = result.reason === 'INVALID_CODE' ? 401 : 400;
+      const status = 400;
       return reply.code(status).send(fail(result.reason ?? 'LOGIN_FAILED', result.message ?? 'Login failed', req.requestId));
     }
     return reply.send(result);
@@ -49,7 +49,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     const { phone, code, password } = parsed.data;
     const result = await authService.registerByPhone(phone, password, code);
     if (!result.ok) {
-      const status = result.reason === 'INVALID_CODE' ? 401 : 400;
+      const status = 400;
       return reply.code(status).send(fail(result.reason ?? 'REGISTER_FAILED', result.message ?? 'Registration failed', req.requestId));
     }
     return reply.send(result);
