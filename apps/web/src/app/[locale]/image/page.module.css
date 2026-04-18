@@ -239,7 +239,7 @@
 .filterBtnActive { border-color: rgba(99,102,241,0.4); color: #a5b4fc; background: rgba(99,102,241,0.08); }
 
 /* Masonry grid */
-.historyGrid { columns: 3; column-gap: 10px; }
+.historyGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .historyCard {
   break-inside: avoid;
   margin-bottom: 10px;
@@ -353,8 +353,9 @@
 
   /* History grid: 2 columns on mobile */
   .historyGrid {
-    columns: 2;
-    column-gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
   .historyCard {
     margin-bottom: 8px;
