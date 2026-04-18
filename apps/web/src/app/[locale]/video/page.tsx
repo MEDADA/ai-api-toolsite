@@ -78,7 +78,6 @@ export default function VideoPage() {
   const [camera, setCamera] = useState(0);
   const [prompt, setPrompt] = useState('');
   const [initImage, setInitImage] = useState<string>('');
-  const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filter, setFilter] = useState<'all' | 'video' | 'fav'>('all');
   const [uploading, setUploading] = useState(false);
@@ -129,7 +128,6 @@ export default function VideoPage() {
       time: '生成中…', img: '', status: 'generating', progress: 0,
     };
     setHistory(prev => [genCard, ...prev]);
-    setIsGenerating(true);
     // Scroll to history panel
     setTimeout(() => historyPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
@@ -174,7 +172,7 @@ export default function VideoPage() {
       setHistory(prev => prev.filter(h => h.id !== tempId));
       info(err.message || '生成失败');
     }
-  }, [prompt, isGenerating, selectedModel, duration, videoResolution, initImage]);
+  }, [prompt, selectedModel, duration, videoResolution, initImage]);
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -246,12 +244,26 @@ export default function VideoPage() {
               )}
               {/* Reference image */}
               {selectedModel!.capabilities.reference_image && (
-                <button
-                  className={`${styles.chip} ${styles.refChip} ${initImage ? styles.chipActive : ''}`}
-                  title={t('refImageTitle')}
-                  onClick={() => setShowRefUpload(true)}>
-                  📷
-                </button>
+                initImage ? (
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img
+                      src={initImage}
+                      alt="参考图"
+                      style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(99,102,241,0.4)' }}
+                    />
+                    <button
+                      onClick={() => setInitImage('')}
+                      style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', lineHeight: '14px', textAlign: 'center' }}
+                    >✕</button>
+                  </div>
+                ) : (
+                  <button
+                    className={`${styles.chip} ${styles.refChip} ${initImage ? styles.chipActive : ''}`}
+                    title={t('refImageTitle')}
+                    onClick={() => setShowRefUpload(true)}>
+                    📷
+                  </button>
+                )
               )}
             </div>
           </div>

@@ -3,7 +3,7 @@
 import styles from './page.module.css';
 import { SiteHeader } from '@/components/site-header';
 import { useTranslations, useLocale } from 'next-intl';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { LightboxModal } from '@/components/lightbox-modal';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
@@ -120,8 +120,10 @@ export default function ImagePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filter, setFilter] = useState('all');
-  const [genProgress, setGenProgress] = useState('');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [initImage, setInitImage] = useState<string>('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load history from API on mount
@@ -155,6 +157,22 @@ export default function ImagePage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const handleImageUpload = useCallback(async (file: File) => {
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setInitImage((e.target?.result as string) || '');
+      setUploading(false);
+    };
+    reader.onerror = () => setUploading(false);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  }, [handleImageUpload]);
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
     if (!isLoggedIn) {
@@ -180,10 +198,9 @@ export default function ImagePage() {
       progress: 5,
     };
     setHistory(prev => [genCard, ...prev]);
-    setIsGenerating(true);
 
     try {
-      const result = await apiClient.tasks.create({
+      const req: Record<string, unknown> = {
         model_slug: selectedModel.id,
         idem_key: `img-${Date.now()}`,
         prompt,
@@ -191,7 +208,9 @@ export default function ImagePage() {
         height: h ?? '2048',
         num_inference_steps: quality,
         image_count: imageCount,
-      });
+      };
+      if (initImage) req.reference_image_url = initImage;
+      const result = await apiClient.tasks.create(req as any);
 
       const tid = result.task_id;
 
@@ -337,8 +356,39 @@ export default function ImagePage() {
               )}
             </div>
 
-            {selectedModel!.capabilities.reference_image && <button className={`${styles.chip} ${styles.refChip}`} title={t('uploadRef')}>📷</button>}
+            {selectedModel!.capabilities.reference_image && (
+                initImage ? (
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img
+                      src={initImage}
+                      alt="参考图"
+                      style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(99,102,241,0.4)' }}
+                    />
+                    <button
+                      onClick={() => setInitImage('')}
+                      style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', lineHeight: '14px', textAlign: 'center' }}
+                    >✕</button>
+                  </div>
+                ) : (
+                  <button
+                    className={`${styles.chip} ${styles.refChip}`}
+                    title={t('uploadRef')}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    {uploading ? <span className={styles.spinner} style={{ width: 12, height: 12 }} /> : '📷'}
+                  </button>
+                )
+              )}
           </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
 
           {/* Prompt + Generate (tight unit) */}
           <div className={styles.coreUnit}>
