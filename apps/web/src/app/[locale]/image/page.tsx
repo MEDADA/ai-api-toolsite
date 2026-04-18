@@ -103,7 +103,7 @@ export default function ImagePage() {
   // Load history from API on mount
   useEffect(() => {
     if (!isLoggedIn) return;
-    apiClient.tasks.list({ page: 1, page_size: 50 }).then(res => {
+    apiClient.tasks.list({ type: 'IMAGE', page: 1, page_size: 50 }).then(res => {
       const items: HistoryItem[] = (res.tasks || []).map((t) => {
         const outputs = t.outputs || [];
         const first = outputs[0] || {};
@@ -222,7 +222,7 @@ export default function ImagePage() {
   };
 
   const imageCount = COUNTS[selectedCount] ?? 1;
-  const filtered = history.filter(h => h.status === 'generating' || filter === 'all' || h.tag === filter);
+  const filtered = history.filter(h => h.status === 'generating' || h.tag === '图片');
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
