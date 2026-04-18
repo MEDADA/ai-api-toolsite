@@ -122,7 +122,6 @@ export default function ImagePage() {
   const [filter, setFilter] = useState('all');
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [initImage, setInitImage] = useState<string>('');
-  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -157,14 +156,11 @@ export default function ImagePage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleImageUpload = useCallback(async (file: File) => {
-    setUploading(true);
+  const handleImageUpload = useCallback((file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       setInitImage((e.target?.result as string) || '');
-      setUploading(false);
     };
-    reader.onerror = () => setUploading(false);
     reader.readAsDataURL(file);
   }, []);
 
@@ -370,8 +366,8 @@ export default function ImagePage() {
                   </div>
                 ) : (
                   <button className={`${styles.chip} ${styles.refChip}`} title={t('uploadRef')}
-                    onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                    {uploading ? <span className={styles.spinner} style={{ width: 12, height: 12 }} /> : '📷'}
+                    onClick={() => fileInputRef.current?.click()}>
+📷
                   </button>
                 )
               )}
@@ -418,7 +414,7 @@ export default function ImagePage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className={styles.mobileSelectLabel}>参考图</span>
                     <div style={{ position: 'relative', display: 'inline-block' }}>
-                      <img src={initImage} alt="参考图"
+                      <img key={initImage.slice(-20)} src={initImage} alt="参考图"
                         style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(99,102,241,0.4)' }} />
                       <button onClick={() => setInitImage('')}
                         style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', lineHeight: '14px', textAlign: 'center' }}>✕</button>
@@ -429,9 +425,9 @@ export default function ImagePage() {
                     className={`${styles.chip} ${styles.refChip}`}
                     title={t('uploadRef')}
                     onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
+
                   >
-                    {uploading ? <span className={styles.spinner} style={{ width: 12, height: 12 }} /> : '📷 上传参考图'}
+📷 上传参考图
                   </button>
                 )
               )}
