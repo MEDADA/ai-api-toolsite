@@ -541,3 +541,45 @@
   background: rgba(16,185,129,0.06) !important;
   border-color: rgba(16,185,129,0.2) !important;
 }
+
+/* Mobile: hide desktop chips, show dropdowns */
+.chipsRow { display: flex; }
+.mobileOptions { display: none; }
+.mobileSelectWrap { display: none; }
+
+/* Mobile dropdowns */
+@media (max-width: 768px) {
+  .chipsRow { display: none; }
+  .mobileOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .mobileSelectWrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mobileSelectLabel {
+    font-size: 12px;
+    color: rgba(255,255,255,0.5);
+    min-width: 48px;
+  }
+  .mobileSelect {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    padding: 8px 10px;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    outline: none;
+  }
+  .mobileSelect:focus {
+    border-color: rgba(99,102,241,0.5);
+    background: rgba(99,102,241,0.08);
+  }
+}

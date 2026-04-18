@@ -180,14 +180,7 @@ export default function ImagePage() {
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
       <SiteHeader />
       {lightboxSrc && <LightboxModal src={lightboxSrc} alt="生成结果" onClose={() => setLightboxSrc(null)} />}
-      {/* Mobile: history toggle button */}
-      <button
-        className={styles.historyToggle}
-        onClick={() => setHistoryOpen(v => !v)}
-      >
-        📋 {historyOpen ? t('resultHistory') + ' ▲' : t('resultHistory') + ' ▼'}
-      </button>
-
+      
       <div className={styles.layout}>
 
         {/* ── Left Panel ── */}
@@ -230,34 +223,61 @@ export default function ImagePage() {
               </div>
             </div>
 
-            {[t('size'), t('quality'), t('count')].map((label, i) => (
-              <div key={label} style={{ display: 'flex', gap: 4 }}>
-                {i === 0 && SIZE_LABELS.map((s, si) => (
-                  <button key={s} className={`${styles.chip} ${si === selectedSize ? styles.chipActive : ''}`}
-                    onClick={() => setSelectedSize(si)}>
-                    <span className={styles.chipLabel}>{label}</span>
-                    <span className={styles.chipDiv}>·</span>
-                    <span>{s}</span>
-                  </button>
-                ))}
-                {i === 1 && QUALITY_LABELS.map((q, qi) => (
-                  <button key={q} className={`${styles.chip} ${qi === selectedQuality ? styles.chipActive : ''}`}
-                    onClick={() => setSelectedQuality(qi)}>
-                    <span className={styles.chipLabel}>{label}</span>
-                    <span className={styles.chipDiv}>·</span>
-                    <span>{q}</span>
-                  </button>
-                ))}
-                {i === 2 && COUNT_LABELS.map((c, ci) => (
-                  <button key={c} className={`${styles.chip} ${ci === selectedCount ? styles.chipActive : ''}`}
-                    onClick={() => setSelectedCount(ci)}>
-                    <span className={styles.chipLabel}>{label}</span>
-                    <span className={styles.chipDiv}>·</span>
-                    <span>{c}</span>
-                  </button>
-                ))}
+            {/* Desktop: chip buttons */ }
+            <div className={styles.chipsRow}>
+              {[t('size'), t('quality'), t('count')].map((label, i) => (
+                <div key={label} style={{ display: 'flex', gap: 4 }}>
+                  {i === 0 && SIZE_LABELS.map((s, si) => (
+                    <button key={s} className={`${styles.chip} ${si === selectedSize ? styles.chipActive : ''}`}
+                      onClick={() => setSelectedSize(si)}>
+                      <span className={styles.chipLabel}>{label}</span>
+                      <span className={styles.chipDiv}>·</span>
+                      <span>{s}</span>
+                    </button>
+                  ))}
+                  {i === 1 && QUALITY_LABELS.map((q, qi) => (
+                    <button key={q} className={`${styles.chip} ${qi === selectedQuality ? styles.chipActive : ''}`}
+                      onClick={() => setSelectedQuality(qi)}>
+                      <span className={styles.chipLabel}>{label}</span>
+                      <span className={styles.chipDiv}>·</span>
+                      <span>{q}</span>
+                    </button>
+                  ))}
+                  {i === 2 && COUNT_LABELS.map((c, ci) => (
+                    <button key={c} className={`${styles.chip} ${ci === selectedCount ? styles.chipActive : ''}`}
+                      onClick={() => setSelectedCount(ci)}>
+                      <span className={styles.chipLabel}>{label}</span>
+                      <span className={styles.chipDiv}>·</span>
+                      <span>{c}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+            {/* Mobile: dropdown selects */}
+            <div className={styles.mobileOptions}>
+              <div className={styles.mobileSelectWrap}>
+                <label className={styles.mobileSelectLabel}>{t('size')}</label>
+                <select className={styles.mobileSelect} value={selectedSize}
+                  onChange={e => setSelectedSize(Number(e.target.value))}>
+                  {SIZE_LABELS.map((s, si) => <option key={s} value={si}>{s}</option>)}
+                </select>
               </div>
-            ))}
+              <div className={styles.mobileSelectWrap}>
+                <label className={styles.mobileSelectLabel}>{t('quality')}</label>
+                <select className={styles.mobileSelect} value={selectedQuality}
+                  onChange={e => setSelectedQuality(Number(e.target.value))}>
+                  {QUALITY_LABELS.map((q, qi) => <option key={q} value={qi}>{q}</option>)}
+                </select>
+              </div>
+              <div className={styles.mobileSelectWrap}>
+                <label className={styles.mobileSelectLabel}>{t('count')}</label>
+                <select className={styles.mobileSelect} value={selectedCount}
+                  onChange={e => setSelectedCount(Number(e.target.value))}>
+                  {COUNT_LABELS.map((c, ci) => <option key={c} value={ci}>{c}</option>)}
+                </select>
+              </div>
+            </div>
 
             <button className={`${styles.chip} ${styles.refChip}`} title={t('uploadRef')}>📷</button>
           </div>
