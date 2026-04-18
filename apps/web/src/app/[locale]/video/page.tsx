@@ -6,13 +6,23 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { apiClient } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
+import type { ModelConfig } from '@/lib/shared-types';
 
-const MODELS = [
-  { id: 'seedance', icon: '🎬', name: 'Seedance 1.5 Pro', desc: '高质量 · 中文理解强', price: '¥1.5/秒' },
-  { id: 'kling-3', icon: '⚡', name: 'Kling 3.0', desc: '极速 · 电商场景', price: '¥2.0/秒' },
+const MODELS: (ModelConfig & { icon?: string })[] = [
+  {
+    id: 'doubao-seedance-1.5-pro',
+    name: 'Seedance 1.5 Pro',
+    desc: '高质量 · 中文理解强 · 参考图支持',
+    price: '¥1.5/次',
+    icon: '🎬',
+    capabilities: {
+      duration: { options: [5, 10, 15], default: 5 },
+      video_resolution: { options: ['540p', '720p', '1080p'], default: '720p' },
+      reference_image: true,
+    },
+  },
 ];
-const DURATIONS = ['5秒', '10秒', '15秒'];
-const RESOLUTIONS = ['720p', '1080p'];
+
 const CAMERAS = ['固定', '环绕', '推进', '平移'];
 const PLACEHOLDER = '描述你想要的视频场景… 例如：无人机穿越峡谷，极速飞行体验';
 
@@ -63,8 +73,8 @@ export default function VideoPage() {
   const { success, info, error: showError } = useToast();
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [resolution, setResolution] = useState(0);
+  const [duration, setDuration] = useState<number>(MODELS[0]!.capabilities.duration?.default ?? 5);
+  const [videoResolution, setVideoResolution] = useState<string>(MODELS[0]!.capabilities.video_resolution?.default ?? '720p');
   const [camera, setCamera] = useState(0);
   const [prompt, setPrompt] = useState('');
   const [initImage, setInitImage] = useState<string>('');
@@ -113,7 +123,7 @@ export default function VideoPage() {
     if (!isLoggedIn) { info('请先登录'); return; }
 
     const tempId = `temp_${Date.now()}`;
-    const durationSec = [5, 10, 15][duration];
+    const durationSec = duration;
     const genCard: HistoryItem = {
       id: tempId, model: selectedModel!.name, prompt,
       time: '生成中…', img: '', status: 'generating', progress: 0,
@@ -128,7 +138,7 @@ export default function VideoPage() {
         model_slug: 'doubao-seedance-1.5-pro',
         prompt,
         duration: durationSec,
-        resolution: RESOLUTIONS[resolution] as '540p' | '720p' | '1080p' | '4K',
+        resolution: videoResolution as '540p' | '720p' | '1080p',
         reference_image_url: initImage || undefined,
       } as any);
 
@@ -164,7 +174,7 @@ export default function VideoPage() {
       setHistory(prev => prev.filter(h => h.id !== tempId));
       info(err.message || '生成失败');
     }
-  }, [prompt, isGenerating, selectedModel, duration, resolution, initImage, RESOLUTIONS]);
+  }, [prompt, isGenerating, selectedModel, duration, videoResolution, initImage]);
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -186,7 +196,12 @@ export default function VideoPage() {
               <div className={`${styles.modelDropdown} ${dropdownOpen ? styles.modelDropdownOpen : ''}`}>
                 {MODELS.map(m => (
                   <div key={m.id} className={`${styles.modelOption} ${m.id === selectedModel!.id ? styles.modelOptionSelected : ''}`}
-                    onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}>
+                    onClick={() => {
+                      setSelectedModel(m);
+                      if (m.capabilities.duration) setDuration(m.capabilities.duration.default);
+                      if (m.capabilities.video_resolution) setVideoResolution(m.capabilities.video_resolution.default);
+                      setDropdownOpen(false);
+                    }}>
                     <div className={styles.modelOptionLeft}>
                       <span style={{ fontSize: 16 }}>{m.icon}</span>
                       <div>
@@ -201,34 +216,44 @@ export default function VideoPage() {
               </div>
             </div>
 
-            {[t('duration'), t('resolution')].map((label) => (
-              <div key={label} style={{ display: 'flex', gap: 4 }}>
-                {label === t('duration') && DURATIONS.map((d, di) => (
-                  <button key={d} className={`${styles.chip} ${di === duration ? styles.chipActive : ''}`} onClick={() => setDuration(di)}>
-                    <span className={styles.chipLabel}>{label}</span><span className={styles.chipDiv}>·</span><span>{d}</span>
-                  </button>
-                ))}
-                {label === t('resolution') && RESOLUTIONS.map((r, ri) => (
-                  <button key={r} className={`${styles.chip} ${ri === resolution ? styles.chipActive : ''}`} onClick={() => setResolution(ri)}>
-                    <span className={styles.chipLabel}>{label}</span><span className={styles.chipDiv}>·</span><span>{r}</span>
-                  </button>
-                ))}
-              </div>
-            ))}
-            {CAMERAS.map((c, ci) => (
-              <button key={c} className={`${styles.chip} ${ci === camera ? styles.chipActive : ''}`} onClick={() => setCamera(ci)}>
-                <span className={styles.chipLabel}>{t('camera')}</span><span className={styles.chipDiv}>·</span><span>{c}</span>
-              </button>
-            ))}
-
-            {/* Reference image upload chip */}
-            <button
-              className={`${styles.chip} ${styles.refChip} ${initImage ? styles.chipActive : ''}`}
-              title={t('refImageTitle')}
-              onClick={() => setShowRefUpload(true)}
-            >
-              📷
-            </button>
+            {/* Dynamic chips based on model capabilities */}
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {/* Duration */}
+              {selectedModel!.capabilities.duration && (
+                <>
+                  <span className={styles.chipLabel}>{t('duration')}</span>
+                  {selectedModel!.capabilities.duration!.options.map(d => (
+                    <button key={d}
+                      className={`${styles.chip} ${d === duration ? styles.chipActive : ''}`}
+                      onClick={() => setDuration(d)}>
+                      <span>{d}秒</span>
+                    </button>
+                  ))}
+                </>
+              )}
+              {/* Resolution */}
+              {selectedModel!.capabilities.video_resolution && (
+                <>
+                  <span className={styles.chipLabel}>{t('resolution')}</span>
+                  {selectedModel!.capabilities.video_resolution!.options.map(r => (
+                    <button key={r}
+                      className={`${styles.chip} ${r === videoResolution ? styles.chipActive : ''}`}
+                      onClick={() => setVideoResolution(r)}>
+                      <span>{r}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+              {/* Reference image */}
+              {selectedModel!.capabilities.reference_image && (
+                <button
+                  className={`${styles.chip} ${styles.refChip} ${initImage ? styles.chipActive : ''}`}
+                  title={t('refImageTitle')}
+                  onClick={() => setShowRefUpload(true)}>
+                  📷
+                </button>
+              )}
+            </div>
           </div>
 
           <div className={styles.coreUnit}>

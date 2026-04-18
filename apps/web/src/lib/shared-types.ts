@@ -187,3 +187,33 @@ export interface RechargeRecord {
   paid_at?: string;
   created_at: string;
 }
+
+// ── Model Capabilities ──────────────────────────────────────
+export interface Capability<T = string> {
+  options: T[];
+  default: T;
+}
+
+export interface ModelCapabilities {
+  // 图片
+  resolution?: Capability<string>;   // e.g. ['1024x1024', '2048x2048']
+  quality?: Capability<string>;       // e.g. ['fast', 'standard', 'high']
+  count?: { min: number; max: number; default: number };
+  reference_image?: boolean;          // 是否支持参考图上传
+  // 视频
+  duration?: Capability<number>;      // e.g. [3, 5, 10, 15] 秒
+  video_resolution?: Capability<string>; // e.g. ['720p', '1080p']
+  // 语音
+  speed?: Capability<number>;        // e.g. [0.8, 1.0, 1.2]
+  language?: Capability<string>;      // e.g. ['中文', '英文', '日文']
+}
+
+export interface ModelConfig {
+  id: string;
+  name: string;
+  desc: string;
+  price: string;
+  icon?: string;
+  recommended?: boolean;
+  capabilities: ModelCapabilities;
+}

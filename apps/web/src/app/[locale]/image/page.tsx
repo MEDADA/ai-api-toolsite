@@ -8,11 +8,12 @@ import { LightboxModal } from '@/components/lightbox-modal';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import type { ModelConfig } from '@/lib/shared-types';
 
 // Doubao Seedream 系列 — 火山引擎官方模型
 const DOUBAD_LOGO = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><circle cx="12" cy="12" r="11" fill="#4267B2"/><path d="M12 6C8.686 6 6 8.686 6 12s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="white"/><circle cx="12" cy="12" r="2" fill="white"/></svg>`;
 
-const MODELS = [
+const MODELS: (ModelConfig & { icon?: string; vendorLogo?: string; vendor?: string })[] = [
   {
     id: 'doubao-seedream-4.0',
     name: 'Doubao Seedream 4.0',
@@ -21,6 +22,12 @@ const MODELS = [
     vendor: '火山引擎',
     vendorLogo: DOUBAD_LOGO,
     recommended: true,
+    capabilities: {
+      resolution: { options: ['1024x1024','2048x2048','1728x2304','2304x1728','1600x2848','2848x1600'], default: '2048x2048' },
+      quality: { options: ['fast','standard','high'], default: 'standard' },
+      count: { min: 1, max: 4, default: 1 },
+      reference_image: true,
+    },
   },
   {
     id: 'doubao-seedream-5.0-lite',
@@ -30,6 +37,12 @@ const MODELS = [
     vendor: '火山引擎',
     vendorLogo: DOUBAD_LOGO,
     recommended: false,
+    capabilities: {
+      resolution: { options: ['1024x1024','2048x2048'], default: '2048x2048' },
+      quality: { options: ['fast','standard','high'], default: 'standard' },
+      count: { min: 1, max: 4, default: 1 },
+      reference_image: true,
+    },
   },
   {
     id: 'doubao-seedream-4.5',
@@ -39,15 +52,26 @@ const MODELS = [
     vendor: '火山引擎',
     vendorLogo: DOUBAD_LOGO,
     recommended: false,
+    capabilities: {
+      resolution: { options: ['1024x1024','2048x2048','3072x3072'], default: '2048x2048' },
+      quality: { options: ['fast','standard','high'], default: 'standard' },
+      count: { min: 1, max: 4, default: 1 },
+      reference_image: true,
+    },
   },
   {
     id: 'doubao-seedream-3.0-t2i',
-    name: 'Doubao Seedream 3.0',
-    desc: '基础文生图 · 快速稳定',
-    price: '¥0.5/张',
+    name: 'Doubao Seedream 3.0 T2I',
+    desc: '经典 T2I · 性价比',
+    price: '¥0.3/张',
     vendor: '火山引擎',
     vendorLogo: DOUBAD_LOGO,
     recommended: false,
+    capabilities: {
+      resolution: { options: ['1024x1024'], default: '1024x1024' },
+      quality: { options: ['standard'], default: 'standard' },
+      count: { min: 1, max: 1, default: 1 },
+    },
   },
 ];
 
@@ -90,9 +114,9 @@ export default function ImagePage() {
   const [selectedModel, setSelectedModel] = useState(MODELS[0]!);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
-  const [selectedSize, setSelectedSize] = useState(2);
-  const [selectedQuality, setSelectedQuality] = useState(1);
-  const [selectedCount, setSelectedCount] = useState(0);
+  const [selectedSize, setSelectedSize] = useState<string>(MODELS[0]!.capabilities.resolution?.default ?? '2048x2048');
+  const [selectedQuality, setSelectedQuality] = useState<string>(MODELS[0]!.capabilities.quality?.default ?? 'standard');
+  const [selectedCount, setSelectedCount] = useState<number>(MODELS[0]!.capabilities.count?.default ?? 1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filter, setFilter] = useState('all');
@@ -138,10 +162,10 @@ export default function ImagePage() {
       return;
     }
 
-    const size = SIZES[selectedSize] ?? '2048x2048';
+    const size = selectedSize ?? '2048x2048';
     const [w, h] = size.split('x');
-    const quality: 'fast' | 'standard' | 'high' = (QUALITIES[selectedQuality] ?? 'standard') as 'fast' | 'standard' | 'high';
-    const imageCount = COUNTS[selectedCount] ?? 1;
+    const quality: 'fast' | 'standard' | 'high' = (selectedQuality ?? 'standard') as 'fast' | 'standard' | 'high';
+    const imageCount = selectedCount ?? 1;
     const tempId = `gen_${Date.now()}`;
 
     // Add generating card at top of history
@@ -236,7 +260,7 @@ export default function ImagePage() {
           <div className={styles.topBar}>
             <div className={styles.modelSelector} ref={dropdownRef}>
               <div className={styles.modelPill} onClick={() => setDropdownOpen(d => !d)}>
-                <span className={styles.modelPillIcon} dangerouslySetInnerHTML={{ __html: selectedModel!.vendorLogo }} />
+                <span className={styles.modelPillIcon} dangerouslySetInnerHTML={{ __html: selectedModel!.vendorLogo as unknown as string }} />
                 <div className={styles.modelPillInfo}>
                   <span className={styles.modelPillName}>{selectedModel!.name}</span>
                   <span className={styles.modelPillVendor}>{selectedModel!.vendor}</span>
@@ -246,10 +270,16 @@ export default function ImagePage() {
               <div className={`${styles.modelDropdown} ${dropdownOpen ? styles.modelDropdownOpen : ''}`}>
                 {MODELS.map(m => (
                   <div key={m.id} className={`${styles.modelOption} ${m.id === selectedModel!.id ? styles.modelOptionSelected : ''} ${m.recommended ? styles.modelOptionRecommended : ''}`}
-                    onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}>
+                    onClick={() => {
+                      setSelectedModel(m);
+                      setSelectedSize(m.capabilities.resolution?.default ?? '2048x2048');
+                      setSelectedQuality(m.capabilities.quality?.default ?? 'standard');
+                      setSelectedCount(m.capabilities.count?.default ?? 1);
+                      setDropdownOpen(false);
+                    }}>
                     <div className={styles.modelOptionLeft}>
                       <div className={styles.modelVendorBadge}>
-                        <span dangerouslySetInnerHTML={{ __html: m.vendorLogo }} />
+                        <span dangerouslySetInnerHTML={{ __html: m.vendorLogo as unknown as string }} />
                         <span className={styles.modelVendorName}>{m.vendor}</span>
                       </div>
                       <div className={styles.modelInfo}>
@@ -269,63 +299,45 @@ export default function ImagePage() {
               </div>
             </div>
 
-            {/* Desktop: chip buttons */ }
-            <div className={styles.chipsRow}>
-              {[t('size'), t('quality'), t('count')].map((label, i) => (
-                <div key={label} style={{ display: 'flex', gap: 4 }}>
-                  {i === 0 && SIZE_LABELS.map((s, si) => (
-                    <button key={s} className={`${styles.chip} ${si === selectedSize ? styles.chipActive : ''}`}
-                      onClick={() => setSelectedSize(si)}>
-                      <span className={styles.chipLabel}>{label}</span>
-                      <span className={styles.chipDiv}>·</span>
-                      <span>{s}</span>
-                    </button>
-                  ))}
-                  {i === 1 && QUALITY_LABELS.map((q, qi) => (
-                    <button key={q} className={`${styles.chip} ${qi === selectedQuality ? styles.chipActive : ''}`}
-                      onClick={() => setSelectedQuality(qi)}>
-                      <span className={styles.chipLabel}>{label}</span>
-                      <span className={styles.chipDiv}>·</span>
-                      <span>{q}</span>
-                    </button>
-                  ))}
-                  {i === 2 && COUNT_LABELS.map((c, ci) => (
-                    <button key={c} className={`${styles.chip} ${ci === selectedCount ? styles.chipActive : ''}`}
-                      onClick={() => setSelectedCount(ci)}>
-                      <span className={styles.chipLabel}>{label}</span>
-                      <span className={styles.chipDiv}>·</span>
-                      <span>{c}</span>
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-            {/* Mobile: dropdown selects */}
+
+            {/* Mobile: dropdown selects - dynamic based on model capabilities */}
             <div className={styles.mobileOptions}>
-              <div className={styles.mobileSelectWrap}>
-                <label className={styles.mobileSelectLabel}>{t('size')}</label>
-                <select className={styles.mobileSelect} value={selectedSize}
-                  onChange={e => setSelectedSize(Number(e.target.value))}>
-                  {SIZE_LABELS.map((s, si) => <option key={s} value={si}>{s}</option>)}
-                </select>
-              </div>
-              <div className={styles.mobileSelectWrap}>
-                <label className={styles.mobileSelectLabel}>{t('quality')}</label>
-                <select className={styles.mobileSelect} value={selectedQuality}
-                  onChange={e => setSelectedQuality(Number(e.target.value))}>
-                  {QUALITY_LABELS.map((q, qi) => <option key={q} value={qi}>{q}</option>)}
-                </select>
-              </div>
-              <div className={styles.mobileSelectWrap}>
-                <label className={styles.mobileSelectLabel}>{t('count')}</label>
-                <select className={styles.mobileSelect} value={selectedCount}
-                  onChange={e => setSelectedCount(Number(e.target.value))}>
-                  {COUNT_LABELS.map((c, ci) => <option key={c} value={ci}>{c}</option>)}
-                </select>
-              </div>
+              {selectedModel!.capabilities.resolution && (
+                <div className={styles.mobileSelectWrap}>
+                  <label className={styles.mobileSelectLabel}>{t('size')}</label>
+                  <select className={styles.mobileSelect} value={selectedSize}
+                    onChange={e => setSelectedSize(e.target.value)}>
+                    {selectedModel!.capabilities.resolution!.options.map(opt =>
+                      <option key={opt} value={opt}>{opt}</option>
+                    )}
+                  </select>
+                </div>
+              )}
+              {selectedModel!.capabilities.quality && (
+                <div className={styles.mobileSelectWrap}>
+                  <label className={styles.mobileSelectLabel}>{t('quality')}</label>
+                  <select className={styles.mobileSelect} value={selectedQuality}
+                    onChange={e => setSelectedQuality(e.target.value)}>
+                    {selectedModel!.capabilities.quality!.options.map(opt =>
+                      <option key={opt} value={opt}>{opt}</option>
+                    )}
+                  </select>
+                </div>
+              )}
+              {selectedModel!.capabilities.count && selectedModel!.capabilities.count!.max > 1 && (
+                <div className={styles.mobileSelectWrap}>
+                  <label className={styles.mobileSelectLabel}>{t('count')}</label>
+                  <select className={styles.mobileSelect} value={selectedCount}
+                    onChange={e => setSelectedCount(Number(e.target.value))}>
+                    {Array.from({ length: selectedModel!.capabilities.count!.max }, (_, i) => i + 1).map(n =>
+                      <option key={n} value={n}>{n}张</option>
+                    )}
+                  </select>
+                </div>
+              )}
             </div>
 
-            <button className={`${styles.chip} ${styles.refChip}`} title={t('uploadRef')}>📷</button>
+            {selectedModel!.capabilities.reference_image && <button className={`${styles.chip} ${styles.refChip}`} title={t('uploadRef')}>📷</button>}
           </div>
 
           {/* Prompt + Generate (tight unit) */}
