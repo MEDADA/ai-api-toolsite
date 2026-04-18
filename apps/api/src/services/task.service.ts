@@ -249,75 +249,46 @@ export const taskService = {
       'X-Accel-Buffering': 'no',
     });
 
-    const redis = await getRedis();
-
-    if (!redis) {
-      // Dev fallback: polling
-      return this._sseFallback(taskId, reply);
-    }
-
-    // 4. Subscribe to Redis PubSub channel for this task
-    const channel = `task:${taskId}`;
-    const subscriber = redis.duplicate();
-
-    subscriber.on('error', () => { /* ignore */ });
-
-    let lastActivity = Date.now();
-    let closed = false;
-
-    const cleanup = () => {
-      if (closed) return;
-      closed = true;
-      clearInterval(heartbeat);
-      clearTimeout(timeout);
-      subscriber.unsubscribe().catch(() => {});
-      subscriber.quit().catch(() => {});
-    };
-
-    const sendEvent = (eventName: string, data: unknown) => {
-      if (closed) return;
+    // Use DB polling instead of Redis PubSub (avoids race conditions)
+    const poll = setInterval(async () => {
       try {
-        reply.raw.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
-        lastActivity = Date.now();
-      } catch {
-        cleanup();
-      }
-    };
-
-    // Subscribe and handle messages
-    await subscriber.subscribe(channel).catch(() => {});
-    subscriber.on('message', (ch: string, msg: string) => {
-      if (ch !== channel) return;
-      try {
-        const { event, data } = JSON.parse(msg);
-        sendEvent(event, data);
-        if (event === 'task_completed' || event === 'task_failed') {
-          cleanup();
+        const task = await prisma.generationTask.findUnique({ where: { id: taskId } });
+        if (!task) {
+          clearInterval(poll);
+          reply.raw.write(`event: task_failed\ndata: ${JSON.stringify({ task_id: taskId, error: 'Task not found' })}\n\n`);
+          reply.raw.end();
+          return;
         }
-      } catch {
-        // ignore parse errors
-      }
-    });
-
-    // Heartbeat: keep-alive every 30s
-    const heartbeat = setInterval(() => {
-      if (closed) return;
-      try {
+        if (task.status === 'SUCCEEDED' || task.status === 'FAILED') {
+          clearInterval(poll);
+          const outputs = await prisma.generationOutput.findMany({
+            where: { task_id: taskId },
+            orderBy: { sort_order: 'asc' },
+          });
+          const eventName = task.status === 'SUCCEEDED' ? 'task_completed' : 'task_failed';
+          const eventData = task.status === 'SUCCEEDED'
+            ? { task_id: taskId, outputs: outputs.map(o => ({ url: o.file_url, thumbnail_url: o.thumbnail_url, width: o.width, height: o.height })) }
+            : { task_id: taskId, error: task.status === 'FAILED' ? 'Generation failed' : 'Unknown error', refunded: true };
+          reply.raw.write(`event: ${eventName}\ndata: ${JSON.stringify(eventData)}\n\n`);
+          reply.raw.end();
+          return;
+        }
+        // Still processing - send heartbeat
         reply.raw.write(`event: heartbeat\ndata: ${JSON.stringify({ ts: Date.now() })}\n\n`);
       } catch {
-        cleanup();
+        clearInterval(poll);
+        reply.raw.end();
       }
-    }, SSE_HEARTBEAT_MS);
+    }, 2000);
 
-    // 60s inactivity timeout → close connection
+    // 60s timeout
     const timeout = setTimeout(() => {
-      cleanup();
+      clearInterval(poll);
       reply.raw.end();
     }, 60_000);
 
-    // Connection close cleanup
-    req.raw.on('close', cleanup);
-    req.raw.on('error', cleanup);
+    req.raw.on('close', () => { clearInterval(poll); clearTimeout(timeout); });
+    req.raw.on('error', () => { clearInterval(poll); clearTimeout(timeout); });
   },
 
   /**
