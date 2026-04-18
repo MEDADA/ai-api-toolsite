@@ -158,7 +158,7 @@ export const authService = {
       },
       access_token: accessToken,
       refresh_token: refreshToken,
-      expires_in: 7200,
+      expires_in: 2592000,
     };
   },
 
@@ -231,7 +231,7 @@ export const authService = {
       },
       access_token: accessToken,
       refresh_token: refreshToken,
-      expires_in: 7200,
+      expires_in: 2592000,
     };
   },
 
@@ -345,7 +345,7 @@ export const authService = {
       },
       access_token: accessToken,
       refresh_token: refreshToken,
-      expires_in: 7200,
+      expires_in: 2592000,
     };
   },
 
@@ -420,7 +420,7 @@ export const authService = {
       if (!user) return { ok: false, reason: 'USER_NOT_FOUND', message: 'User not found' };
 
       const newAccessToken = await signAccessToken(user.id, user.level);
-      return { ok: true, access_token: newAccessToken, expires_in: 7200 };
+      return { ok: true, access_token: newAccessToken, expires_in: 2592000 };
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Token invalid';
       return { ok: false, reason: 'INVALID_REFRESH_TOKEN', message: msg };
@@ -468,7 +468,7 @@ async function signAccessToken(userId: string, level: string): Promise<string> {
   return new SignJWT({ userId, level, type: 'access' })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('2h')
+    .setExpirationTime('30d')
     .setJti(jti)
     .sign(ACCESS_SECRET);
 }

@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token) return;
     // Refresh 60 seconds before expiry (actual expires_in from login/refresh response)
-    const expiresIn = parseInt(typeof localStorage !== 'undefined' ? (localStorage.getItem('token_expires_in') ?? '7200') : '7200', 10);
+    const expiresIn = parseInt(typeof localStorage !== 'undefined' ? (localStorage.getItem('token_expires_in') ?? '2592000') : '2592000', 10);
     const ms = (expiresIn - 60) * 1000;
     refreshTimerRef.current = setTimeout(async () => {
       try {
