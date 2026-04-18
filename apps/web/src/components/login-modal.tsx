@@ -38,7 +38,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [btnHover, setBtnHover] = useState(false);
   const [oauthHover, setOAuthHover] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     setMounted(true);
@@ -58,7 +57,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
     setPassword('');
     setConfirmPassword('');
     setCountdown(0);
-    setErrorMsg('');
+    setFormError('');
   };
 
   // ─── Send code ────────────────────────────────────────────────────────────
@@ -81,7 +80,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; _response?: { reason?: string } };
       const msg = err.code || err.message || t('sendFailed');
-      setErrorMsg(msg);
       setFormError(msg);
     } finally {
       setLoading(false);
@@ -94,7 +92,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       setFormError(t('invalidCode'));
       return;
     }
-    setErrorMsg('');
+    setFormError('');
     setLoading(true);
     try {
       await login(phone, code);
@@ -108,7 +106,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
       if (err.code === 'INVALID_CODE' || err.status === 401) {
         msg = t('invalidCode');
       }
-      setErrorMsg(msg);
       setFormError(msg);
     } finally {
       setLoading(false);
@@ -125,7 +122,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       setFormError(t('passwordPlaceholder'));
       return;
     }
-    setErrorMsg('');
+    setFormError('');
     setLoading(true);
     try {
       await loginByPassword(phone, password);
@@ -141,7 +138,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
       } else if (reason === 'INVALID_PASSWORD') {
         msg = t('invalidPassword');
       }
-      setErrorMsg(msg);
       setFormError(msg);
     } finally {
       setLoading(false);
@@ -166,7 +162,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
       setFormError(t('confirmPasswordMismatch'));
       return;
     }
-    setErrorMsg('');
+    setFormError('');
     setLoading(true);
     try {
       await registerByPhone(phone, code, password);
@@ -182,7 +178,6 @@ export function LoginModal({ onClose }: LoginModalProps) {
       } else if (reason === 'INVALID_CODE') {
         msg = t('invalidCode');
       }
-      setErrorMsg(msg);
       setFormError(msg);
     } finally {
       setLoading(false);
@@ -521,27 +516,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
           type="text"
           placeholder={t('codePlaceholder')}
           value={code}
-          onChange={(e) => { setCode((e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6)); setErrorMsg(''); }}
+          onChange={(e) => { setCode((e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6)); setFormError(''); }}
           onFocus={() => setFocusedField('code')}
           onBlur={() => setFocusedField(null)}
           maxLength={6}
           style={codeInput}
         />
       </div>
-      {errorMsg && (
-        <div style={{
-          color: '#ef4444',
-          fontSize: 13,
-          padding: '8px 12px',
-          background: 'rgba(239,68,68,0.1)',
-          borderRadius: 6,
-          marginTop: 4,
-          marginBottom: 8,
-        }}>
-          {errorMsg}
-        </div>
-      )}
-      <button
+            <button
         style={ghostBtn}
         disabled={loading || countdown > 0}
         onClick={handleSendCode}
@@ -623,20 +605,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           </button>
         </div>
       </div>
-      {errorMsg && (
-        <div style={{
-          color: '#ef4444',
-          fontSize: 13,
-          padding: '8px 12px',
-          background: 'rgba(239,68,68,0.1)',
-          borderRadius: 6,
-          marginTop: 4,
-          marginBottom: 8,
-        }}>
-          {errorMsg}
-        </div>
-      )}
-
+      
       <button
         style={primaryBtn}
         onMouseEnter={() => setBtnHover(true)}
@@ -769,20 +738,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           </button>
         </div>
       </div>
-      {errorMsg && (
-        <div style={{
-          color: '#ef4444',
-          fontSize: 13,
-          padding: '8px 12px',
-          background: 'rgba(239,68,68,0.1)',
-          borderRadius: 6,
-          marginTop: 4,
-          marginBottom: 8,
-        }}>
-          {errorMsg}
-        </div>
-      )}
-
+      
       <button
         style={primaryBtn}
         onMouseEnter={() => setBtnHover(true)}
