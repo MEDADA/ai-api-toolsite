@@ -73,12 +73,10 @@ export default function VideoPage() {
 
   const handleGenerate = useCallback(async () => {
     if (!prompt.trim() || isGenerating) return;
-
     if (!isLoggedIn) { info('请先登录'); return; }
 
     const tempId = `temp_${Date.now()}`;
     const durationSec = [5, 10, 15][duration];
-
     const genCard: HistoryItem = {
       id: tempId, model: selectedModel!.name, prompt,
       time: '生成中…', img: '', status: 'generating', progress: 0,
@@ -95,44 +93,34 @@ export default function VideoPage() {
         init_image: initImage || undefined,
       });
 
-      const { task_id } = result;
+      const task_id = result.task_id;
+      setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '排队中…', progress: 5 } : h));
 
-      // Connect to SSE stream using apiClient
-      const es = apiClient.tasks.getStream(task_id);
-
-      es.addEventListener('task_processing', () => {
-        setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '排队中…', progress: 5 } : h));
-      });
-
-      es.addEventListener('task_progress', (e) => {
+      // Poll task status every 2s
+      const poll = setInterval(async () => {
         try {
-          const data = JSON.parse(e.data);
-          const pct = typeof data.progress === 'number' ? Math.round(data.progress * 100) : 0;
-          setHistory(prev => prev.map(h => h.id === tempId ? {
-            ...h, time: `生成中 ${pct}%`, progress: pct,
-          } : h));
-        } catch { /* ignore */ }
-      });
-
-      es.addEventListener('task_completed', (e) => {
-        const data = JSON.parse(e.data);
-        const videoUrl = data.outputs?.[0]?.url;
-        setHistory(prev => prev.map(h => h.id === tempId ? {
-          ...h, id: task_id, img: videoUrl || '', status: 'completed', time: '刚刚', progress: 100,
-        } : h));
-        setIsGenerating(false);
-        es.close();
-      });
-
-      es.addEventListener('task_failed', (e) => {
-        const data = JSON.parse(e.data);
-        setHistory(prev => prev.filter(h => h.id !== tempId));
-        setIsGenerating(false);
-        info(`生成失败: ${data.error}`);
-        es.close();
-      });
-
-      es.onerror = () => { es.close(); setIsGenerating(false); };
+          const task = await apiClient.tasks.get(task_id);
+          const st = task.status;
+          if (st === 'PROCESSING' || st === 'QUEUED' || st === 'CREATED') {
+            const pct = st === 'PROCESSING' ? 50 : 10;
+            setHistory(prev => prev.map(h => h.id === tempId ? {
+              ...h, time: '生成中…', progress: pct,
+            } : h));
+          } else if (st === 'SUCCEEDED') {
+            clearInterval(poll);
+            const videoUrl = (task.outputs as Array<{url?:string}>)?.[0]?.url || '';
+            setHistory(prev => prev.map(h => h.id === tempId ? {
+              ...h, id: task_id, img: videoUrl, status: 'completed', time: '刚刚', progress: 100,
+            } : h));
+            setIsGenerating(false);
+          } else if (st === 'FAILED') {
+            clearInterval(poll);
+            setHistory(prev => prev.filter(h => h.id !== tempId));
+            setIsGenerating(false);
+            info('生成失败，请稍后重试');
+          }
+        } catch { /* poll errors non-fatal */ }
+      }, 2000);
 
     } catch (err: any) {
       setHistory(prev => prev.filter(h => h.id !== tempId));

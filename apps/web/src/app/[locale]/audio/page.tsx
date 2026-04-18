@@ -98,39 +98,31 @@ export default function AudioPage() {
         language: LANGUAGES[language],
       });
 
-      const { task_id } = result;
+      const task_id = result.task_id;
+      setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '处理中…' } : h));
 
-      const es = apiClient.tasks.getStream(task_id);
-
-      es.addEventListener('task_processing', () => {
-        setHistory(prev => prev.map(h => h.id === tempId ? { ...h, time: '处理中…' } : h));
-      });
-
-      es.addEventListener('task_completed', (e) => {
-        const data = JSON.parse(e.data);
-        const audioUrl = data.outputs?.[0]?.url || '';
-        const duration = data.outputs?.[0]?.duration || '—';
-        setHistory(prev => prev.map(h => h.id === tempId ? {
-          ...h,
-          id: task_id,
-          audioUrl,
-          duration: typeof duration === 'number' ? `${duration}s` : duration,
-          status: 'completed',
-          time: '刚刚',
-        } : h));
-        setIsGenerating(false);
-        es.close();
-      });
-
-      es.addEventListener('task_failed', (e) => {
-        const data = JSON.parse(e.data);
-        setHistory(prev => prev.filter(h => h.id !== tempId));
-        setIsGenerating(false);
-        info(`生成失败: ${data.error}`);
-        es.close();
-      });
-
-      es.onerror = () => { es.close(); setIsGenerating(false); };
+      // Poll every 2s
+      const poll = setInterval(async () => {
+        try {
+          const task = await apiClient.tasks.get(task_id);
+          const st = task.status;
+          if (st === 'SUCCEEDED') {
+            clearInterval(poll);
+            const audioUrl = (task.outputs as Array<{url?:string; duration?:string|number}>)?.[0]?.url || '';
+            const dur = (task.outputs as Array<{duration?:string|number}>)?.[0]?.duration;
+            const duration = dur ? (typeof dur === 'number' ? `${dur}s` : dur) : '—';
+            setHistory(prev => prev.map(h => h.id === tempId ? {
+              ...h, id: task_id, audioUrl, duration, status: 'completed', time: '刚刚',
+            } : h));
+            setIsGenerating(false);
+          } else if (st === 'FAILED') {
+            clearInterval(poll);
+            setHistory(prev => prev.filter(h => h.id !== tempId));
+            setIsGenerating(false);
+            info('生成失败，请稍后重试');
+          }
+        } catch { /* poll errors non-fatal */ }
+      }, 2000);
 
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '生成失败';
