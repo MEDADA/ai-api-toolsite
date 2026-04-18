@@ -181,10 +181,13 @@ export const taskService = {
       tasks: tasks.map(t => ({
         id: t.id,
         model_slug: t.model.slug,
+        model_name: t.model.name,
         task_type: t.task_type,
         status: t.status,
         total_cost: Number(t.total_cost),
         thumbnail: t.outputs[0]?.thumbnail_url ?? t.outputs[0]?.file_url,
+        outputs: t.outputs.map(o => ({ url: o.file_url, thumbnail_url: o.thumbnail_url, width: o.width, height: o.height })),
+        prompt: (t.input_params as Record<string, unknown>)?.prompt as string || '',
         created_at: t.created_at.toISOString(),
       })),
       pagination: { total, page, page_size: pageSize, totalPages: Math.ceil(total / pageSize) },

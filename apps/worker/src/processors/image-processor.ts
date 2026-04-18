@@ -121,6 +121,7 @@ async function handleSuccess(
   );
 
   // 2. Save outputs to DB
+  console.log('[ImageProcessor] Saving outputs:', JSON.stringify(outputs));
   await prisma.generationOutput.createMany({
     data: outputs.map(o => ({
       task_id: taskId,
