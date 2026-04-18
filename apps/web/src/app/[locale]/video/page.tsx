@@ -248,7 +248,7 @@ export default function VideoPage() {
             </div>
             <button className={styles.generateBtn} onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim()}>
-              '🎬 ' + t('generate')
+              {'🎬 ' + t('generate')}
             </button>
           </div>
           <p className={styles.balanceHint}>
@@ -258,7 +258,7 @@ export default function VideoPage() {
         </aside>
 
         {/* Right */}
-        <main className={styles.rightPanel}>
+        <main className={`${styles.rightPanel} ${styles.rightPanelOpen}`}>
           <div className={styles.historyTopbar}>
             <div><span className={styles.historyHeading}>{t('history')}</span><span className={styles.historyCount}>{history.length} 条</span></div>
             <div className={styles.historyFilter}>

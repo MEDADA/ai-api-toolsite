@@ -303,7 +303,7 @@ export default function AudioPage() {
         </aside>
 
         {/* Right */}
-        <main className={styles.rightPanel}>
+        <main className={`${styles.rightPanel} ${styles.rightPanelOpen}`}>
           <div className={styles.historyTopbar}>
             <div><span className={styles.historyHeading}>{t('history')}</span><span className={styles.historyCount}>{history.length} {t('records')}</span></div>
             <div className={styles.historyFilter}>
