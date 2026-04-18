@@ -1,13 +1,12 @@
 /**
- * Seedance Video Generation Adapter.
- * Interfaces with 火山引擎 (Volcengine) Visual Generation API.
+ * Seedance Video Adapter — 火山引擎 Ark API v3.
+ * Uses same ARK_API_KEY as image generation, different model + request format.
  */
-
 import { z } from 'zod';
 
 export const SeedanceVideoParamsSchema = z.object({
-  prompt: z.string().min(1).max(500),
-  duration: z.union([z.literal(3), z.literal(5), z.literal(10), z.literal(15)]).default(5),
+  prompt: z.string().min(1),
+  duration: z.number().int().min(3).max(15).default(5),
   resolution: z.enum(['540p', '720p', '1080p', '4K']).default('1080p'),
   reference_image_url: z.string().url().optional(),
   fps: z.number().optional().default(24),
@@ -16,181 +15,96 @@ export const SeedanceVideoParamsSchema = z.object({
 
 export type SeedanceVideoParams = z.infer<typeof SeedanceVideoParamsSchema>;
 
-export interface UpstreamRequest {
-  url: string;
-  method: 'POST' | 'GET';
-  headers: Record<string, string>;
-  body?: Record<string, unknown>;
-}
-
 export interface ParsedResult {
   status: 'completed' | 'failed';
-  outputs: Array<{
-    url: string;
-    thumbnail_url?: string;
-    duration?: number;
-    width?: number;
-    height?: number;
-    mime_type?: string;
-  }>;
+  outputs: Array<{ url: string; thumbnail_url?: string; duration?: number }>;
   error?: string;
   jobId?: string;
 }
 
-interface ValidationResult {
-  valid: boolean;
-  errors?: Array<{ path: string; message: string }>;
-  params?: SeedanceVideoParams;
-}
-
-/** Validate input parameters */
-export function validate(params: unknown): ValidationResult {
+export function validate(params: unknown): { valid: boolean; errors?: Array<{ message: string }>; params?: SeedanceVideoParams } {
   const result = SeedanceVideoParamsSchema.safeParse(params);
   if (!result.success) {
-    return {
-      valid: false,
-      errors: result.error.errors.map(e => ({ path: e.path.join('.'), message: e.message })),
-    };
+    return { valid: false, errors: result.error.errors.map(e => ({ message: e.message })) };
   }
   return { valid: true, params: result.data };
 }
 
-function signVolcengineRequest(
-  method: string,
-  path: string,
-  body: string,
-  accessKey: string,
-  secretKey: string,
-  timestamp: string
-): string {
-  // Simplified signature — in production use proper HMAC-SHA256
-  const crypto = require('crypto') as typeof import('crypto');
-  const stringToSign = `${method}\n${path}\n${timestamp}\n${body}`;
-  return crypto.createHmac('sha256', secretKey).update(stringToSign).digest('hex');
-}
-
-/** Convert to 火山引擎 Visual Generation API request */
-export function toUpstream(params: SeedanceVideoParams, config: {
-  access_key: string;
-  secret_key: string;
-  account_id: string;
-  space_name: string;
-}): UpstreamRequest {
-  const body: Record<string, unknown> = {
-    model: 'seedance-2-0',
-    request_id: `seedance_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-    prompt: params.prompt,
-    duration: params.duration ?? 5,
-    resolution: params.resolution ?? '1080p',
-    fps: params.fps ?? 24,
-  };
+export function toUpstream(params: SeedanceVideoParams, apiKey: string): {
+  url: string; method: string; headers: Record<string, string>; body: Record<string, unknown>;
+} {
+  // Build content array (text required, image optional)
+  const content: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+    {
+      type: 'text',
+      text: `${params.prompt} --duration ${params.duration} --camerafixed false --watermark true`,
+    },
+  ];
 
   if (params.reference_image_url) {
-    body.reference_image_url = params.reference_image_url;
+    content.push({
+      type: 'image_url',
+      image_url: { url: params.reference_image_url },
+    });
   }
-
-  if (params.camera_control) {
-    body.camera_control = params.camera_control;
-  }
-
-  const bodyStr = JSON.stringify(body);
-  const timestamp = new Date().toISOString();
-  const path = '/api/v1/visual_generation/video';
-
-  const signature = signVolcengineRequest(
-    'POST', path, bodyStr,
-    config.access_key, config.secret_key, timestamp
-  );
 
   return {
-    url: `https://visual.volcengineapi.com${path}`,
+    url: 'https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks',
     method: 'POST',
     headers: {
-      'X-Access-Key': config.access_key,
-      'X-Timestamp': timestamp,
-      'X-Signature': signature,
+      'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body,
+    body: {
+      model: 'doubao-seedance-1-5-pro-251215',
+      content,
+    },
   };
 }
 
-/** Parse 火山引擎 response */
 export function parseResponse(data: Record<string, unknown>): ParsedResult {
-  const code = data.code;
-  const message = data.message as string ?? '';
-
-  if (code !== 0 && code !== '0') {
-    return { status: 'failed', outputs: [], error: message };
+  const code = data.code as number | undefined;
+  if (code !== 0 && code !== undefined) {
+    return { status: 'failed', outputs: [], error: String(data.message ?? 'Upstream error') };
   }
 
-  const videoData = data.data as Record<string, unknown> | undefined;
-  if (!videoData) {
-    return { status: 'failed', outputs: [], error: 'No video data in response' };
-  }
+  const task = data.data as Record<string, unknown> | undefined;
+  if (!task) return { status: 'failed', outputs: [], error: 'No data in response' };
 
-  const duration = videoData.duration as number | undefined;
-  const videoUrl = videoData.video_url as string | undefined;
+  const taskId = task.task_id as string;
+  const outputs = task.outputs as Array<{ url: string }> | undefined;
 
-  if (!videoUrl) {
-    return { status: 'failed', outputs: [], error: 'No video URL in response' };
-  }
+  if (!taskId) return { status: 'failed', outputs: [], error: 'No task_id in response' };
 
   return {
     status: 'completed',
-    outputs: [{
-      url: videoUrl,
-      thumbnail_url: videoData.thumbnail_url ? String(videoData.thumbnail_url) : undefined,
-      duration: duration ?? 5,
-      mime_type: 'video/mp4',
-    }],
-    jobId: videoData.task_id as string | undefined,
+    outputs: (outputs ?? []).map(o => ({ url: o.url })),
+    jobId: taskId,
   };
 }
 
-/** Poll 火山引擎 job status */
-export async function pollStatus(
-  jobId: string,
-  config: {
-    access_key: string;
-    secret_key: string;
+/** Poll video task status (async API) */
+export async function pollStatus(jobId: string, apiKey: string): Promise<{
+  status: 'completed' | 'failed'; outputs: Array<{ url: string }>; result?: ParsedResult; error?: string
+}> {
+  const MAX_RETRIES = 30;
+  const INTERVAL_MS = 5000;
+
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    await new Promise(r => setTimeout(r, INTERVAL_MS));
+
+    try {
+      const resp = await fetch(`https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks/${jobId}`, {
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      });
+      const data = await resp.json() as Record<string, unknown>;
+      const parsed = parseResponse(data);
+      if (parsed.status === 'completed' || parsed.status === 'failed') {
+        return { status: parsed.status, outputs: parsed.outputs as Array<{ url: string }>, result: parsed };
+      }
+    } catch (e) {
+      // continue polling
+    }
   }
-): Promise<{ status: 'pending' | 'processing' | 'completed' | 'failed'; progress?: number; result?: ParsedResult }> {
-  const timestamp = new Date().toISOString();
-  const path = `/api/v1/visual_generation/video/${jobId}`;
-  const signature = signVolcengineRequest('GET', path, '', config.access_key, config.secret_key, timestamp);
-
-  const resp = await fetch(`https://visual.volcengineapi.com${path}`, {
-    headers: {
-      'X-Access-Key': config.access_key,
-      'X-Timestamp': timestamp,
-      'X-Signature': signature,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!resp.ok) return { status: 'failed' };
-
-  const data = await resp.json() as Record<string, unknown>;
-
-  // Check status from response
-  const statusStr = (data.status as string ?? '').toLowerCase();
-  if (statusStr === 'success' || statusStr === 'completed') {
-    return { status: 'completed', result: parseResponse(data) };
-  }
-  if (statusStr === 'failed') {
-    return { status: 'failed', result: parseResponse(data) };
-  }
-
-  const progress = data.progress as number | undefined;
-  return {
-    status: statusStr === 'pending' ? 'pending' : 'processing',
-    progress: progress ?? undefined,
-  };
-}
-
-/** Estimate cost (in fen/分) based on duration × unit price */
-export function estimateCost(params: SeedanceVideoParams, unitPricePerSecond: number): number {
-  const duration = params.duration ?? 5;
-  return Math.round(unitPricePerSecond * duration);
+  return { status: 'failed', outputs: [], error: 'Polling timeout' };
 }

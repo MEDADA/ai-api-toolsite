@@ -12,13 +12,6 @@ import { publishSSE } from '../lib/sse-emitter.js';
 
 const SEEDANCE_UNIT_PRICE = 300; // ¥3.0/s = 300分/秒
 
-interface VideoChannelConfig {
-  access_key: string;
-  secret_key: string;
-  account_id: string;
-  space_name: string;
-}
-
 export async function videoProcessor(
   job: Job<GenerationJobData>,
   prisma: PrismaClient
@@ -43,25 +36,15 @@ export async function videoProcessor(
 
   const params = validation.params!;
 
-  // ── Step 2: Get channel config ──────────────────────────────────
-  const channel = await prisma.providerChannel.findFirst({
-    where: { model_id: modelSlug, status: 'ACTIVE' },
-    orderBy: { priority: 'asc' },
-  });
-
-  if (!channel) {
-    await handleFailure(taskId, userId, job.data.totalCost, 'No active channel for this model', prisma);
-    return;
-  }
-
-  const config = channel.config as VideoChannelConfig;
-  if (!config.access_key || !config.secret_key) {
-    await handleFailure(taskId, userId, job.data.totalCost, 'Channel not configured', prisma);
+  // ── Step 2: Get API key (same ARK key as image generation) ─
+  const apiKey = process.env.ARK_API_KEY ?? '';
+  if (!apiKey) {
+    await handleFailure(taskId, userId, job.data.totalCost, 'No API key configured (ARK_API_KEY)', prisma);
     return;
   }
 
   // ── Step 3: Call upstream API ────────────────────────────────────
-  const upstreamReq = toUpstream(params, config);
+  const upstreamReq = toUpstream(params, apiKey);
 
   let upstreamJobId = '';
   try {
@@ -95,11 +78,11 @@ export async function videoProcessor(
     // Log provider request
     await prisma.providerRequestLog.create({
       data: {
-        channel_id: channel.id,
+        channel_id: 'ark-video',
         task_id: taskId,
         upstream_job_id: upstreamJobId,
         request: upstreamReq as any,
-        response: data,
+        response: data as any,
         status_code: response.status,
       },
     }).catch(() => {});
@@ -118,7 +101,7 @@ export async function videoProcessor(
     while (Date.now() < timeoutAt) {
       await sleep(8000); // Poll every 8 seconds for video
 
-      const pollRes = await pollStatus(upstreamJobId, config);
+      const pollRes = await pollStatus(upstreamJobId, apiKey);
       pollCount++;
 
       if (pollRes.status === 'completed' && pollRes.result) {
@@ -169,9 +152,9 @@ async function handleSuccess(
       return {
         task_id: taskId,
         file_url: output.url,
-        thumbnail_url: output.thumbnail_url,
+        thumbnail_url: (output.thumbnail_url ?? null) as string | null,
         duration: output.duration ?? params.duration ?? 5,
-        mime_type: output.mime_type ?? 'video/mp4',
+        mime_type: 'video/mp4',
         sort_order: i,
       };
     })
