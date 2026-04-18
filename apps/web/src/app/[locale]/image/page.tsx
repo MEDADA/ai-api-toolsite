@@ -318,6 +318,64 @@ export default function ImagePage() {
               </div>
             </div>
 
+            {/* Desktop: chip buttons - dynamic based on model capabilities */}
+            <div className={styles.chipsRow}>
+              {/* Resolution */}
+              {selectedModel!.capabilities.resolution && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <span className={styles.chipLabel}>{t('size')}</span>
+                  {selectedModel!.capabilities.resolution!.options.map(opt => (
+                    <button key={opt}
+                      className={`${styles.chip} ${opt === selectedSize ? styles.chipActive : ''}`}
+                      onClick={() => setSelectedSize(opt)}>
+                      <span>{opt}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Quality */}
+              {selectedModel!.capabilities.quality && (
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <span className={styles.chipLabel}>{t('quality')}</span>
+                  {selectedModel!.capabilities.quality!.options.map(opt => (
+                    <button key={opt}
+                      className={`${styles.chip} ${opt === selectedQuality ? styles.chipActive : ''}`}
+                      onClick={() => setSelectedQuality(opt)}>
+                      <span>{opt === 'fast' ? '⚡快速' : opt === 'high' ? '🔥高质量' : '✨标准'}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Count */}
+              {selectedModel!.capabilities.count && selectedModel!.capabilities.count!.max > 1 && (
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <span className={styles.chipLabel}>{t('count')}</span>
+                  {Array.from({ length: selectedModel!.capabilities.count!.max }, (_, i) => i + 1).map(n => (
+                    <button key={n}
+                      className={`${styles.chip} ${n === selectedCount ? styles.chipActive : ''}`}
+                      onClick={() => setSelectedCount(n)}>
+                      <span>{n}张</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Reference image */}
+              {selectedModel!.capabilities.reference_image && (
+                initImage ? (
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img src={initImage} alt="参考图"
+                      style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(99,102,241,0.4)' }} />
+                    <button onClick={() => setInitImage('')}
+                      style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', lineHeight: '14px', textAlign: 'center' }}>✕</button>
+                  </div>
+                ) : (
+                  <button className={`${styles.chip} ${styles.refChip}`} title={t('uploadRef')}
+                    onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                    {uploading ? <span className={styles.spinner} style={{ width: 12, height: 12 }} /> : '📷'}
+                  </button>
+                )
+              )}
+            </div>
 
             {/* Mobile: dropdown selects - dynamic based on model capabilities */}
             <div className={styles.mobileOptions}>
@@ -354,20 +412,17 @@ export default function ImagePage() {
                   </select>
                 </div>
               )}
-            </div>
-
-            {selectedModel!.capabilities.reference_image && (
+              {/* Reference image - always visible on mobile */}
+              {selectedModel!.capabilities.reference_image && (
                 initImage ? (
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                    <img
-                      src={initImage}
-                      alt="参考图"
-                      style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(99,102,241,0.4)' }}
-                    />
-                    <button
-                      onClick={() => setInitImage('')}
-                      style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', lineHeight: '14px', textAlign: 'center' }}
-                    >✕</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className={styles.mobileSelectLabel}>参考图</span>
+                    <div style={{ position: 'relative', display: 'inline-block' }}>
+                      <img src={initImage} alt="参考图"
+                        style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover', border: '1px solid rgba(99,102,241,0.4)' }} />
+                      <button onClick={() => setInitImage('')}
+                        style={{ position: 'absolute', top: -4, right: -4, width: 14, height: 14, borderRadius: '50%', background: '#ef4444', border: 'none', color: '#fff', fontSize: 9, cursor: 'pointer', lineHeight: '14px', textAlign: 'center' }}>✕</button>
+                    </div>
                   </div>
                 ) : (
                   <button
@@ -376,10 +431,12 @@ export default function ImagePage() {
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
                   >
-                    {uploading ? <span className={styles.spinner} style={{ width: 12, height: 12 }} /> : '📷'}
+                    {uploading ? <span className={styles.spinner} style={{ width: 12, height: 12 }} /> : '📷 上传参考图'}
                   </button>
                 )
               )}
+            </div>
+
           </div>
 
           <input
