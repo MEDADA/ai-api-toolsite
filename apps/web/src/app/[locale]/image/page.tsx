@@ -7,7 +7,6 @@ import { useState, useRef, useEffect } from 'react';
 import { apiClient } from '@/lib/api-client';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import type { SSECompleted, SSEFailed, SSEProgress, SSETaskQueued } from '@/lib/shared-types';
 
 // Doubao Seedream 系列 — 火山引擎官方模型
 const DOUBAD_LOGO = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><circle cx="12" cy="12" r="11" fill="#4267B2"/><path d="M12 6C8.686 6 6 8.686 6 12s2.686 6 6 6 6-2.686 6-6-2.686-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" fill="white"/><circle cx="12" cy="12" r="2" fill="white"/></svg>`;
@@ -87,7 +86,6 @@ export default function ImagePage() {
   const [genProgress, setGenProgress] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -101,17 +99,14 @@ export default function ImagePage() {
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
-
     if (!isLoggedIn) {
       showError(t('loginToGenerate'));
       return;
     }
 
     setIsGenerating(true);
-    setGenProgress('');
-    eventSourceRef.current?.close();
+    setGenProgress(t('queuedMsg', { position: '1' }));
 
-    const taskId = `img-${Date.now()}`;
     const size = SIZES[selectedSize] ?? '2048x2048';
     const [w, h] = size.split('x');
     const quality: 'fast' | 'standard' | 'high' = (QUALITIES[selectedQuality] ?? 'standard') as 'fast' | 'standard' | 'high';
@@ -119,78 +114,51 @@ export default function ImagePage() {
     try {
       const result = await apiClient.tasks.create({
         model_slug: selectedModel.id,
-        idem_key: taskId,
+        idem_key: `img-${Date.now()}`,
         prompt,
-        width: w,
-        height: h,
+        width: w ?? '2048',
+        height: h ?? '2048',
         num_inference_steps: quality,
         image_count: COUNTS[selectedCount] ?? 1,
       });
 
       const tid = result.task_id;
+      setGenProgress(t('startedMsg') + ' 0%');
 
-      // Connect to SSE stream
-      const es = apiClient.tasks.getStream(tid);
-      eventSourceRef.current = es;
-
-      es.onmessage = (e) => {
+      // Poll task status every 2 seconds
+      const pollInterval = setInterval(async () => {
         try {
-          const parsed = JSON.parse(e.data) as { type: string; data: unknown };
-          if (parsed.type === 'queued') {
-            const d = parsed.data as SSETaskQueued;
-            setGenProgress(t('queuedMsg', { position: d.position?.toString() ?? '?' }));
-          } else if (parsed.type === 'started') {
-            setGenProgress(t('startedMsg'));
-          } else if (parsed.type === 'progress') {
-            const d = parsed.data as SSEProgress;
-            setGenProgress(t('progressMsg', { progress: d.progress.toString() }));
-          } else if (parsed.type === 'completed') {
-            const d = parsed.data as SSECompleted;
-            const newItems: HistoryItem[] = d.outputs.map((o, i) => ({
+          const task = await apiClient.tasks.get(tid);
+          const st = task.status;
+
+          if (st === 'PROCESSING' || st === 'QUEUED') {
+            setGenProgress(t('startedMsg') + ' 50%');
+          } else if (st === 'SUCCEEDED') {
+            clearInterval(pollInterval);
+            const newItems: HistoryItem[] = (task.outputs || []).map((o, i) => ({
               id: `${tid}-${i}`,
               model: `${selectedModel.name} · ${size}`,
               prompt,
               time: '刚刚',
-              img: o.url,
+              img: (o as { url?: string }).url || '',
               tag: '图片',
             }));
             setHistory(prev => [...newItems, ...prev]);
             success(t('successImage'));
             refetchBalance();
-            es.close();
             setIsGenerating(false);
             setGenProgress('');
-          } else if (parsed.type === 'failed') {
-            const d = parsed.data as SSEFailed;
-            showError(t('taskFailed') + (d.error ? `: ${d.error}` : ''));
-            es.close();
+          } else if (st === 'FAILED') {
+            clearInterval(pollInterval);
+            showError(t('taskFailed'));
             setIsGenerating(false);
             setGenProgress('');
           }
         } catch {
-          // ignore parse errors
+          // poll errors are non-fatal, keep polling
         }
-      };
+      }, 2000);
 
-      let sseConnected = false;
-      const sseTimeout = setTimeout(() => {
-        if (!sseConnected) {
-          setGenProgress(t('startedMsg') + '...');
-        }
-      }, 8000);
-
-      es.onopen = () => {
-        sseConnected = true;
-        clearTimeout(sseTimeout);
-      };
-
-      es.onerror = () => {
-        clearTimeout(sseTimeout);
-        es.close();
-        setIsGenerating(false);
-        setGenProgress('');
-        showError('实时连接中断，请刷新页面查看结果');
-      };
     } catch (err) {
       const e = err as { message?: string; code?: string };
       if (e.code === 'UNAUTHORIZED') {
