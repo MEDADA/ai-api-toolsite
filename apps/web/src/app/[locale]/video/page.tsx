@@ -243,7 +243,7 @@ export default function VideoPage() {
             </div>
             <button className={styles.generateBtn} onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim()}>
-              {isGenerating ? <><span className={styles.spinner} /> {t('generating')}</> : '🎬 ' + t('generate')}
+              '🎬 ' + t('generate')
             </button>
           </div>
           <p className={styles.balanceHint}>
@@ -264,6 +264,9 @@ export default function VideoPage() {
             {history.map(item => (
               item.status === 'generating' ? (
                 <div key={item.id} className={`${styles.historyCard} ${styles.generatingCard}`}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, background: 'rgba(99,102,241,0.06)', borderRadius: '10px 10px 0 0' }}>
+                    <span className={styles.spinner} style={{ width: 28, height: 28, borderWidth: 3 }} />
+                  </div>
                   <div className={styles.genHeader}>
                     <span className={styles.genLabel}>🎬 {item.time}</span>
                     {item.progress !== undefined && (

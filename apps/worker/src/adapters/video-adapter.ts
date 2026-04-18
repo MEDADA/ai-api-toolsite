@@ -16,7 +16,7 @@ export const SeedanceVideoParamsSchema = z.object({
 export type SeedanceVideoParams = z.infer<typeof SeedanceVideoParamsSchema>;
 
 export interface ParsedResult {
-  status: 'completed' | 'failed';
+  status: 'completed' | 'failed' | 'processing';
   outputs: Array<{ url: string; thumbnail_url?: string; duration?: number }>;
   error?: string;
   jobId?: string;
@@ -73,13 +73,25 @@ export function parseResponse(data: Record<string, unknown>): ParsedResult {
   if (!taskId) return { status: 'failed', outputs: [], error: 'No task_id in response: ' + JSON.stringify(data) };
 
   const task = (data.data ?? data) as Record<string, unknown>;
-  const outputs = task.outputs as Array<{ url: string }> | undefined;
+  const taskStatus = task.status as string | undefined;
+  const content = task.content as Record<string, unknown> | undefined;
+  const videoUrl = content?.video_url as string | undefined;
 
-  return {
-    status: 'completed',
-    outputs: (outputs ?? []).map(o => ({ url: o.url })),
-    jobId: taskId,
-  };
+  // Check task status from Volcano API
+  if (taskStatus === 'failed' || taskStatus === 'failed_nearly_quotas' || taskStatus === 'cancelled') {
+    return { status: 'failed', outputs: [], error: 'Upstream task failed: ' + taskStatus, jobId: taskId };
+  }
+
+  if (taskStatus === 'succeeded' && videoUrl) {
+    return {
+      status: 'completed',
+      outputs: [{ url: videoUrl }],
+      jobId: taskId,
+    };
+  }
+
+  // Still processing — return in-progress marker
+  return { status: 'processing', outputs: [], jobId: taskId };
 }
 
 /** Poll video task status (async API) */

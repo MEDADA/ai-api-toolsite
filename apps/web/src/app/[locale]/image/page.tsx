@@ -65,6 +65,8 @@ interface HistoryItem {
   time: string;
   img: string;
   tag: string;
+  status?: 'generating' | 'completed';
+  progress?: number;
 }
 
 function formatTime(dateStr: string): string {
@@ -136,12 +138,25 @@ export default function ImagePage() {
       return;
     }
 
-    setIsGenerating(true);
-    setGenProgress(t('queuedMsg', { position: '1' }));
-
     const size = SIZES[selectedSize] ?? '2048x2048';
     const [w, h] = size.split('x');
     const quality: 'fast' | 'standard' | 'high' = (QUALITIES[selectedQuality] ?? 'standard') as 'fast' | 'standard' | 'high';
+    const imageCount = COUNTS[selectedCount] ?? 1;
+    const tempId = `gen_${Date.now()}`;
+
+    // Add generating card at top of history
+    const genCard: HistoryItem = {
+      id: tempId,
+      model: `${selectedModel.name} · ${size}`,
+      prompt,
+      time: '排队中…',
+      img: '',
+      tag: '图片',
+      status: 'generating',
+      progress: 5,
+    };
+    setHistory(prev => [genCard, ...prev]);
+    setIsGenerating(true);
 
     try {
       const result = await apiClient.tasks.create({
@@ -151,11 +166,10 @@ export default function ImagePage() {
         width: w ?? '2048',
         height: h ?? '2048',
         num_inference_steps: quality,
-        image_count: COUNTS[selectedCount] ?? 1,
+        image_count: imageCount,
       });
 
       const tid = result.task_id;
-      setGenProgress(t('startedMsg') + ' 0%');
 
       // Poll task status every 2 seconds
       const pollInterval = setInterval(async () => {
@@ -163,8 +177,11 @@ export default function ImagePage() {
           const task = await apiClient.tasks.get(tid);
           const st = task.status;
 
-          if (st === 'PROCESSING' || st === 'QUEUED') {
-            setGenProgress(t('startedMsg') + ' 50%');
+          if (st === 'PROCESSING' || st === 'QUEUED' || st === 'CREATED') {
+            const pct = st === 'PROCESSING' ? 60 : 20;
+            setHistory(prev => prev.map(h => h.id === tempId ? {
+              ...h, time: '生成中…', progress: pct,
+            } : h));
           } else if (st === 'SUCCEEDED') {
             clearInterval(pollInterval);
             const newItems: HistoryItem[] = (task.outputs || []).map((o, i) => ({
@@ -175,16 +192,15 @@ export default function ImagePage() {
               img: (o as { url?: string }).url || '',
               tag: '图片',
             }));
-            setHistory(prev => [...newItems, ...prev]);
+            setHistory(prev => newItems.concat(prev.filter(h => h.id !== tempId)));
             success(t('successImage'));
             refetchBalance();
             setIsGenerating(false);
-            setGenProgress('');
           } else if (st === 'FAILED') {
             clearInterval(pollInterval);
+            setHistory(prev => prev.filter(h => h.id !== tempId));
             showError(t('taskFailed'));
             setIsGenerating(false);
-            setGenProgress('');
           }
         } catch {
           // poll errors are non-fatal, keep polling
@@ -205,7 +221,8 @@ export default function ImagePage() {
     }
   };
 
-  const filtered = filter === 'all' ? history : history.filter(h => h.tag === filter);
+  const imageCount = COUNTS[selectedCount] ?? 1;
+  const filtered = history.filter(h => h.status === 'generating' || filter === 'all' || h.tag === filter);
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -333,11 +350,7 @@ export default function ImagePage() {
               onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim()}
             >
-              {isGenerating ? (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <span className={styles.spinner} /> {genProgress || t('generating')}
-                </span>
-              ) : '🎨 ' + t('generate')}
+              '🎨 ' + t('generate')
             </button>
           </div>
 
@@ -364,29 +377,51 @@ export default function ImagePage() {
 
           <div className={styles.historyGrid}>
             {filtered.map(item => (
-              <div key={item.id} className={styles.historyCard}>
-                <img className={styles.historyImg} src={item.img} alt={item.prompt} loading="lazy" onClick={() => setLightboxSrc(item.img)} style={{ cursor: "zoom-in" }} />
-                <div className={styles.historyCardBody}>
-                  <span className={styles.historyModelTag}>{item.model}</span>
-                </div>
-                <div className={styles.historyCardFooter}>
-                  <span className={styles.historyTime}>{item.time}</span>
-                  <div className={styles.historyActions}>
-                    <button
-                      className={styles.histAct}
-                      onClick={() => {
-                        if (!item.img) { showError('图片还未生成，请稍候'); return; }
-                        const a = document.createElement('a');
-                        a.href = item.img; a.download = `ai-image-${item.id}.png`; a.target = '_blank'; a.click();
-                      }}
-                    >⬇</button>
-                    <button
-                      className={styles.histAct}
-                      onClick={() => success('已收藏到收藏夹')}
-                    >⭐</button>
+              item.status === 'generating' ? (
+                <div key={item.id} className={`${styles.historyCard} ${styles.generatingCard}`}>
+                  <div className={styles.genPreview} style={{ gridTemplateColumns: imageCount > 1 ? `repeat(${Math.min(imageCount, 2)}, 1fr)` : '1fr' }}>
+                    {Array.from({ length: imageCount }).map((_, i) => (
+                      <div key={i} className={`${styles.genSlot} ${styles.genSlotEmpty}`}>
+                        <span className={styles.spinner} style={{ width: 10, height: 10, borderWidth: 1.5 }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className={styles.genHeader}>
+                    <span className={styles.genLabel}>🎨 {item.time}</span>
+                    {item.progress !== undefined && (
+                      <span style={{ fontSize: 9, color: '#a5b4fc', marginLeft: 'auto' }}>{item.progress}%</span>
+                    )}
+                  </div>
+                  <div className={styles.genPrompt}>{item.prompt}</div>
+                  <div className={styles.genProgressTrack}>
+                    <div className={styles.genProgressBar} style={{ width: `${item.progress ?? 0}%` }} />
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div key={item.id} className={styles.historyCard}>
+                  <img className={styles.historyImg} src={item.img} alt={item.prompt} loading="lazy" onClick={() => setLightboxSrc(item.img)} style={{ cursor: "zoom-in" }} />
+                  <div className={styles.historyCardBody}>
+                    <span className={styles.historyModelTag}>{item.model}</span>
+                  </div>
+                  <div className={styles.historyCardFooter}>
+                    <span className={styles.historyTime}>{item.time}</span>
+                    <div className={styles.historyActions}>
+                      <button
+                        className={styles.histAct}
+                        onClick={() => {
+                          if (!item.img) { showError('图片还未生成，请稍候'); return; }
+                          const a = document.createElement('a');
+                          a.href = item.img; a.download = `ai-image-${item.id}.png`; a.target = '_blank'; a.click();
+                        }}
+                      >⬇</button>
+                      <button
+                        className={styles.histAct}
+                        onClick={() => success('已收藏到收藏夹')}
+                      >⭐</button>
+                    </div>
+                  </div>
+                </div>
+              )
             ))}
           </div>
         </main>
