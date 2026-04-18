@@ -332,15 +332,31 @@ export default function VideoPage() {
                 </div>
               ) : (
                 <div key={item.id} className={styles.historyCard}>
-                  <video
+                  <div
                     className={styles.historyThumb}
-                    src={item.img}
-                    controls
-                    muted
-                    playsInline
-                    preload="metadata"
-                    style={{ width: '100%', display: 'block', background: '#000' }}
-                  />
+                    style={{ position: 'relative', background: 'linear-gradient(135deg, #1e1e2e 0%, #2a2a4a 100%)', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    onClick={() => {
+                      const video = document.createElement('video');
+                      video.src = item.img;
+                      video.controls = true;
+                      video.muted = false;
+                      video.playsInline = true;
+                      video.style.cssText = 'width:100%;display:block;background:#000;';
+                      video.oncanplay = () => {
+                        const target = document.getElementById('vp-' + item.id);
+                        if (target) { target.innerHTML = ''; target.appendChild(video); }
+                      };
+                      const target = document.getElementById('vp-' + item.id);
+                      if (target) { target.innerHTML = ''; target.appendChild(video); }
+                    }}
+                  >
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }}>
+                      <circle cx="20" cy="20" r="20" fill="rgba(255,255,255,0.15)"/>
+                      <path d="M16 13 L30 20 L16 27 Z" fill="white"/>
+                    </svg>
+                    <span style={{ position: 'absolute', bottom: 6, right: 8, fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>点击播放</span>
+                  </div>
+                  <div id={'vp-' + item.id} style={{ display: 'none' }} />
                   <div className={styles.historyBody}>
                     <span className={styles.historyTag}>{item.model}</span>
                     <p className={styles.historyPrompt}>{item.prompt}</p>
