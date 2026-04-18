@@ -70,9 +70,11 @@ export default function VideoPage() {
   const [initImage, setInitImage] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [filter, setFilter] = useState<'all' | 'video' | 'fav'>('all');
   const [uploading, setUploading] = useState(false);
   const [showRefUpload, setShowRefUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const historyPanelRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -118,6 +120,8 @@ export default function VideoPage() {
     };
     setHistory(prev => [genCard, ...prev]);
     setIsGenerating(true);
+    // Scroll to history panel
+    setTimeout(() => historyPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
     try {
       const result = await apiClient.tasks.create({
@@ -148,6 +152,7 @@ export default function VideoPage() {
               ...h, id: task_id, img: videoUrl, status: 'completed', time: '刚刚', progress: 100,
             } : h));
             setIsGenerating(false);
+            success('🎬 视频生成成功！');
           } else if (st === 'FAILED') {
             clearInterval(poll);
             setHistory(prev => prev.filter(h => h.id !== tempId));
@@ -257,11 +262,17 @@ export default function VideoPage() {
           <div className={styles.historyTopbar}>
             <div><span className={styles.historyHeading}>{t('history')}</span><span className={styles.historyCount}>{history.length} 条</span></div>
             <div className={styles.historyFilter}>
-              {[t('filterAll'), t('filterVideo'), t('filterFav')].map((f,i) => <button key={f} className={`${styles.filterBtn} ${i===0 ? styles.filterBtnActive : ''}`}>{f}</button>)}
+              {[t('filterAll'), t('filterVideo'), t('filterFav')].map((f,i) => {
+              const vals: Array<'all'|'video'|'fav'> = ['all', 'video', 'fav'];
+              return <button key={f} className={`${styles.filterBtn} ${filter === vals[i] ? styles.filterBtnActive : ''}`} onClick={() => setFilter(vals[i]!)}>{f}</button>;
+            })}
             </div>
           </div>
-          <div className={styles.historyGrid}>
-            {history.map(item => (
+          <div className={styles.historyGrid} ref={historyPanelRef}>
+            {(() => {
+              const generatingItems = history.filter(h => h.status === 'generating');
+              const completedItems = filter === 'all' ? history.filter(h => h.status !== 'generating') : filter === 'video' ? history.filter(h => h.status !== 'generating') : [];
+              return [...generatingItems, ...completedItems].map(item => (
               item.status === 'generating' ? (
                 <div key={item.id} className={`${styles.historyCard} ${styles.generatingCard}`}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 160, background: 'rgba(99,102,241,0.06)', borderRadius: '10px 10px 0 0' }}>
@@ -312,7 +323,8 @@ export default function VideoPage() {
                   </div>
                 </div>
               )
-            ))}
+            ));
+            })()}
           </div>
         </main>
       </div>
