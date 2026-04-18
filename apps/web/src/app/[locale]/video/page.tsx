@@ -56,7 +56,7 @@ export default function VideoPage() {
             progress: 100,
           };
         });
-      setHistory(prev => items.length > 0 && prev.length === 0 ? items : prev);
+      if (items.length > 0) setHistory(items);
     }).catch(() => {});
   }, [isLoggedIn]);
 

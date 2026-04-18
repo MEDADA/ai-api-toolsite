@@ -77,7 +77,7 @@ export default function AudioPage() {
             status: 'completed' as const,
           };
         });
-      setHistory(prev => items.length > 0 && prev.length === 0 ? items : prev);
+      if (items.length > 0) setHistory(items);
     }).catch(() => {});
   }, [isLoggedIn]);
 
