@@ -132,7 +132,7 @@ export default function ImagePage() {
   }, []);
 
   const handleGenerate = async () => {
-    if (!prompt.trim() || isGenerating) return;
+    if (!prompt.trim()) return;
     if (!isLoggedIn) {
       showError(t('loginToGenerate'));
       return;
@@ -195,12 +195,10 @@ export default function ImagePage() {
             setHistory(prev => newItems.concat(prev.filter(h => h.id !== tempId)));
             success(t('successImage'));
             refetchBalance();
-            setIsGenerating(false);
           } else if (st === 'FAILED') {
             clearInterval(pollInterval);
             setHistory(prev => prev.filter(h => h.id !== tempId));
             showError(t('taskFailed'));
-            setIsGenerating(false);
           }
         } catch {
           // poll errors are non-fatal, keep polling
@@ -216,13 +214,13 @@ export default function ImagePage() {
       } else {
         showError(e.message ?? t('error'));
       }
-      setIsGenerating(false);
-      setGenProgress('');
     }
   };
 
   const imageCount = COUNTS[selectedCount] ?? 1;
-  const filtered = history.filter(h => h.status === 'generating' || h.tag === '图片');
+  const generating = history.filter(h => h.status === 'generating');
+  const completed = filter === 'fav' ? [] : history.filter(h => h.status !== 'generating' && h.tag === '图片');
+  const filtered = [...generating, ...completed];
 
   return (
     <main style={{ minHeight: '100vh', background: '#08080f' }}>
@@ -348,7 +346,7 @@ export default function ImagePage() {
             <button
               className={styles.generateBtn}
               onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim()}
+              disabled={!prompt.trim()}
             >
               '🎨 ' + t('generate')
             </button>
@@ -369,7 +367,7 @@ export default function ImagePage() {
             </div>
             <div className={styles.historyFilter}>
               {([t('filterAll'), t('filterImage'), t('filterFav')] as const).map((f, i) => {
-                const vals = ['all', '图片', '收藏'] as const;
+                const vals = ['all' as const, '图片' as const, '收藏' as const];
                 return <button key={f} className={`${styles.filterBtn} ${filter === vals[i] ? styles.filterBtnActive : ''}`} onClick={() => setFilter(vals[i]!)}>{f}</button>;
               })}
             </div>

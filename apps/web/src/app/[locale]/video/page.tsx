@@ -109,7 +109,7 @@ export default function VideoPage() {
   }, [handleImageUpload]);
 
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim() || isGenerating) return;
+    if (!prompt.trim()) return;
     if (!isLoggedIn) { info('请先登录'); return; }
 
     const tempId = `temp_${Date.now()}`;
@@ -151,12 +151,10 @@ export default function VideoPage() {
             setHistory(prev => prev.map(h => h.id === tempId ? {
               ...h, id: task_id, img: videoUrl, status: 'completed', time: '刚刚', progress: 100,
             } : h));
-            setIsGenerating(false);
             success('🎬 视频生成成功！');
           } else if (st === 'FAILED') {
             clearInterval(poll);
             setHistory(prev => prev.filter(h => h.id !== tempId));
-            setIsGenerating(false);
             info('生成失败，请稍后重试');
           }
         } catch { /* poll errors non-fatal */ }
@@ -164,7 +162,6 @@ export default function VideoPage() {
 
     } catch (err: any) {
       setHistory(prev => prev.filter(h => h.id !== tempId));
-      setIsGenerating(false);
       info(err.message || '生成失败');
     }
   }, [prompt, isGenerating, selectedModel, duration, resolution, initImage, RESOLUTIONS]);
@@ -247,7 +244,7 @@ export default function VideoPage() {
               </div>
             </div>
             <button className={styles.generateBtn} onClick={handleGenerate}
-              disabled={isGenerating || !prompt.trim()}>
+              disabled={!prompt.trim()}>
               {'🎬 ' + t('generate')}
             </button>
           </div>
