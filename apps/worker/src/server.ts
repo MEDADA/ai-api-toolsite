@@ -1,3 +1,29 @@
+// Load ARK_API_KEY from .env
+  const idx = line.indexOf('=');
+  if (idx > 0 && !line.startsWith('#')) {
+    const key = line.slice(0, idx).trim();
+    const val = line.slice(idx + 1).trim();
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+
+// Load ARK_API_KEY from .env
+import { readFileSync } from 'fs';
+const envFile = readFileSync('/Users/a/Documents/AI-API-Toolsite-v2/apps/worker/.env', 'utf8');
+for (const line of envFile.split('\n')) {
+  const idx = line.indexOf('=');
+  if (idx > 0 && !line.startsWith('#')) {
+    const key = line.slice(0, idx).trim();
+    const val = line.slice(idx + 1).trim();
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+
+// Load environment variables
+import { config } from 'dotenv';
+import path from 'path';
+config({ path: path.resolve(__dirname, '../../.env') });
+
 /**
  * BullMQ Worker entry point for AI generation tasks.
  * Handles image, video, and audio generation via registered processors.

@@ -68,13 +68,12 @@ export function parseResponse(data: Record<string, unknown>): ParsedResult {
     return { status: 'failed', outputs: [], error: String(data.message ?? 'Upstream error') };
   }
 
-  const task = data.data as Record<string, unknown> | undefined;
-  if (!task) return { status: 'failed', outputs: [], error: 'No data in response' };
+  // Response can be either { id: "task-id" } or { data: { task_id: "task-id" } }
+  const taskId = (data.id ?? (data.data as Record<string, unknown> | undefined)?.task_id) as string | undefined;
+  if (!taskId) return { status: 'failed', outputs: [], error: 'No task_id in response: ' + JSON.stringify(data) };
 
-  const taskId = task.task_id as string;
+  const task = (data.data ?? data) as Record<string, unknown>;
   const outputs = task.outputs as Array<{ url: string }> | undefined;
-
-  if (!taskId) return { status: 'failed', outputs: [], error: 'No task_id in response' };
 
   return {
     status: 'completed',
