@@ -85,7 +85,6 @@ export default function ImagePage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [filter, setFilter] = useState('all');
   const [genProgress, setGenProgress] = useState('');
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -298,7 +297,7 @@ export default function ImagePage() {
         </aside>
 
         {/* ── Right Panel: History ── */}
-        <main className={`${styles.rightPanel} ${historyOpen ? styles.rightPanelOpen : ''}`}>
+        <main className={`${styles.rightPanel} ${styles.rightPanelOpen}`}>
           <div className={styles.historyTopbar}>
             <div>
               <span className={styles.historyHeading}>{t('resultHistory')}</span>
