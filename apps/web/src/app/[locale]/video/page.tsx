@@ -21,10 +21,45 @@ interface HistoryItem {
   img: string; status?: 'generating' | 'completed'; progress?: number;
 }
 
+function formatTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  return `${Math.floor(h / 24)} 天前`;
+}
+
 export default function VideoPage() {
   const t = useTranslations('video');
   const locale = useLocale();
   const { isLoggedIn } = useAuth();
+
+  // Load history from API on mount
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    apiClient.tasks.list({ type: 'VIDEO', page: 1, page_size: 50 }).then(res => {
+      const items: HistoryItem[] = (res.tasks || [])
+        .filter(t => t.status === 'SUCCEEDED')
+        .map((t) => {
+          const outputs = t.outputs || [];
+          const first = outputs[0] || {};
+          const inputParams = (t.input_params || {}) as { prompt?: string };
+          return {
+            id: t.id,
+            model: t.model_slug || '—',
+            prompt: inputParams.prompt || '',
+            time: formatTime(t.created_at),
+            img: (first as { url?: string }).url || '',
+            status: 'completed' as const,
+            progress: 100,
+          };
+        });
+      setHistory(prev => items.length > 0 && prev.length === 0 ? items : prev);
+    }).catch(() => {});
+  }, [isLoggedIn]);
+
   const { success, info, error: showError } = useToast();
   const [selectedModel, setSelectedModel] = useState(MODELS[0]);
   const [dropdownOpen, setDropdownOpen] = useState(false);

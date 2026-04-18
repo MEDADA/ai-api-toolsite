@@ -24,13 +24,9 @@ interface AudioHistoryItem {
   playing?: boolean;
   audioUrl?: string;
   status?: 'generating' | 'completed' | 'failed';
+  model?: string;
+  img?: string;
 }
-
-const INITIAL_HISTORY: AudioHistoryItem[] = [
-  { id: '1', type: 'TTS · 晓晓', text: '欢迎使用 AI 语音合成服务，支持多种音色和语言切换', time: '刚刚', duration: '12s', audioUrl: '', status: 'completed' },
-  { id: '2', type: 'TTS · 云飞', text: 'The future of AI content creation is here', time: '5 分钟前', duration: '8s', audioUrl: '', status: 'completed' },
-  { id: '3', type: '声音克隆', text: '这是一段用你声音克隆生成的语音内容', time: '20 分钟前', duration: '15s', audioUrl: '', status: 'completed' },
-];
 
 function Waveform() {
   const [bars, setBars] = useState<number[]>([]);
@@ -46,10 +42,45 @@ function Waveform() {
   );
 }
 
+function formatTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return `${m} 分钟前`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} 小时前`;
+  return `${Math.floor(h / 24)} 天前`;
+}
+
 export default function AudioPage() {
   const t = useTranslations('audio');
   const locale = useLocale();
   const { isLoggedIn } = useAuth();
+
+  // Load history from API on mount
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    apiClient.tasks.list({ type: 'AUDIO', page: 1, page_size: 50 }).then(res => {
+      const items: AudioHistoryItem[] = (res.tasks || [])
+        .filter(t => t.status === 'SUCCEEDED')
+        .map((t) => {
+          const outputs = t.outputs || [];
+          const first = outputs[0] || {};
+          const inputParams = (t.input_params || {}) as { prompt?: string };
+          return {
+            id: t.id,
+            type: t.task_type || 'AUDIO',
+            text: inputParams.prompt || '',
+            time: formatTime(t.created_at),
+            duration: (first as { duration?: number }).duration ? `${(first as { duration?: number }).duration}s` : '—',
+            audioUrl: (first as { url?: string }).url || '',
+            status: 'completed' as const,
+          };
+        });
+      setHistory(prev => items.length > 0 && prev.length === 0 ? items : prev);
+    }).catch(() => {});
+  }, [isLoggedIn]);
+
   const { success, info } = useToast();
   const [modeIdx, setModeIdx] = useState(0);
   const [selectedVoice, setSelectedVoice] = useState(VOICES[0]);
@@ -58,7 +89,7 @@ export default function AudioPage() {
   const [speed, setSpeed] = useState(1.0);
   const [text, setText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [history, setHistory] = useState<AudioHistoryItem[]>(INITIAL_HISTORY);
+  const [history, setHistory] = useState<AudioHistoryItem[]>([]);
   const voiceDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

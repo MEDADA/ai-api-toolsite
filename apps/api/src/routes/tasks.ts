@@ -20,9 +20,14 @@ export async function taskRoutes(fastify: FastifyInstance) {
   // GET /api/v1/tasks
   fastify.get('/', async (req: FastifyRequest, reply: FastifyReply) => {
     const { type, status, page, page_size } = req.query as {
-      type?: string; status?: string; page?: number; page_size?: number;
+      type?: string; status?: string; page?: string; page_size?: string;
     };
-    const result = await taskService.listTasks(req.userId!, { type, status, page, page_size });
+    const result = await taskService.listTasks(req.userId!, {
+      type,
+      status,
+      page: page ? parseInt(page, 10) : undefined,
+      page_size: page_size ? parseInt(page_size, 10) : undefined,
+    });
     return reply.send(success(result, req.requestId));
   });
 
