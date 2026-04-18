@@ -585,3 +585,15 @@
     background: rgba(99,102,241,0.08);
   }
 }
+
+/* Mobile: model dropdown must not be clipped by topBar overflow */
+@media (max-width: 768px) {
+  .modelSelector {
+    overflow: visible !important;
+    position: relative;
+    z-index: 9999;
+  }
+  .topBar .modelSelector {
+    flex-shrink: 0;
+  }
+}
