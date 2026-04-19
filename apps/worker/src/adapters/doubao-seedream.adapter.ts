@@ -73,9 +73,9 @@ export function validate(input: Record<string, unknown>): { valid: boolean; para
   }
 
   // Validate minimum size for newer models
-  const [wStr, hStr] = size.split('x');
+  const [wStr = '', hStr = ''] = size.split('x');
   const w = parseInt(wStr);
-  const h = parseInt(hStr ?? wStr);
+  const h = parseInt(hStr || wStr);
   const actualPixels = w * h;
   if (actualPixels < minPixels) {
     return {
@@ -84,18 +84,17 @@ export function validate(input: Record<string, unknown>): { valid: boolean; para
     };
   }
 
-  return {
-    valid: true,
-    params: {
-      prompt,
-      image: input.image as string | undefined,
-      size,
-      model: apiModel,
-      guidance_scale: input.guidance_scale as number | undefined,
-      watermark: (input.watermark as boolean) ?? false,
-      response_format: (input.response_format as 'url' | 'b64_json') ?? 'url',
-    },
+  const params: DoubaoSeedreamParams = {
+    prompt,
+    size,
+    model: apiModel,
+    watermark: (input.watermark as boolean) ?? false,
+    response_format: (input.response_format as 'url' | 'b64_json') ?? 'url',
   };
+  if (input.image) { params.image = input.image as string; }
+  if (input.guidance_scale !== undefined) { params.guidance_scale = input.guidance_scale as number; }
+
+  return { valid: true, params };
 }
 
 /** Convert to Doubao Ark API request format */
