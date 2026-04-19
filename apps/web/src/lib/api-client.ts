@@ -70,6 +70,7 @@ class ApiClient {
     });
 
     if (response.status === 401) {
+      console.warn('[Auth] ⚠️⚠️⚠️ 401 RECEIVED - clearing auth. URL:', url, 'Method:', method);
       // Trigger logout by clearing token
       this.clearAuthToken();
       if (typeof localStorage !== 'undefined') {

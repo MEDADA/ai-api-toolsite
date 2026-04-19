@@ -7,6 +7,14 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['@mantine/core', '@mantine/hooks', 'lucide-react'],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3004/api/:path*',
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

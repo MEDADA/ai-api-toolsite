@@ -13,7 +13,7 @@ type Tab = 'phone' | 'email' | 'google' | 'apple';
 type PhoneMode = 'code' | 'password' | 'register';
 
 export function LoginModal({ onClose }: LoginModalProps) {
-  const { login, loginByPassword, registerByPhone, sendCode } = useAuth();
+  const { login, loginByPassword, registerByPhone, sendCode, isLoggedIn } = useAuth();
   const t = useTranslations('login');
   const { info } = useToast();
 
@@ -42,6 +42,18 @@ export function LoginModal({ onClose }: LoginModalProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Auto-close modal when login succeeds (isLoggedIn becomes true)
+  useEffect(() => {
+    if (isLoggedIn) {
+      setShowBonus(true);
+      // Close after showing bonus
+      const timer = setTimeout(() => {
+        onClose();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, onClose]);
 
   const TABS: { key: Tab; labelKey: string }[] = [
     { key: 'phone', labelKey: 'tabPhone' },
@@ -98,7 +110,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
       await login(phone, code);
       setFormSuccess(t('loginSuccess'));
       setShowBonus(true);
-      setTimeout(() => { onClose(); }, 2500);
+      setTimeout(() => {
+        onClose();
+        window.location.reload();
+      }, 1500);
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; status?: number; _response?: { reason?: string } };
       // 401 = invalid or expired code; 400 = other validation error
@@ -128,7 +143,10 @@ export function LoginModal({ onClose }: LoginModalProps) {
       await loginByPassword(phone, password);
       setFormSuccess(t('loginSuccess'));
       setShowBonus(true);
-      setTimeout(() => { onClose(); }, 2500);
+      setTimeout(() => {
+        onClose();
+        window.location.reload();
+      }, 1500);
     } catch (e: unknown) {
       const err = e as { code?: string; message?: string; _response?: { reason?: string } };
       const reason = err.code || (err._response as { reason?: string })?.reason;

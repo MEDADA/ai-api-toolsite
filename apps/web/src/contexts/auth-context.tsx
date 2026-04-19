@@ -51,6 +51,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedToken = typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null;
     const savedUser = typeof localStorage !== 'undefined' ? localStorage.getItem(USER_KEY) : null;
+    console.log('[Auth] Page load - localStorage check:', {
+      hasToken: !!savedToken,
+      hasUser: !!savedUser,
+      tokenPrefix: savedToken ? savedToken.substring(0, 20) + '...' : null,
+    });
     if (savedToken && savedUser) {
       apiClient.setAuthToken(savedToken);
       setToken(savedToken);
@@ -61,6 +66,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     setLoading(false);
+  }, []);
+
+  // Monitor localStorage changes (detects when another tab or navigation clears auth)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (e: StorageEvent) => {
+      if (e.key === TOKEN_KEY && e.newValue === null) {
+        console.warn('[Auth] ⚠️ localStorage auth_token was CLEARED. oldValue:', e.oldValue?.substring(0, 20));
+      }
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
   }, []);
 
   // Fetch balance when logged in
@@ -108,6 +125,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [token]);
 
   const _setSession = useCallback((result: LoginResult) => {
+    console.log('[Auth] ★ _setSession CALLED with result.ok =', result.ok, 'access_token exists:', !!result.access_token);
+
+    if (!result.ok || !result.access_token) {
+      console.error('[Auth] _setSession called with invalid result:', result);
+      return;
+    }
+
     const newToken = result.access_token;
     const refreshToken = typeof result.refresh_token === 'string'
       ? result.refresh_token
@@ -118,10 +142,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(result.user);
 
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(TOKEN_KEY, newToken);
-      localStorage.setItem(REFRESH_KEY, refreshToken);
-      localStorage.setItem(USER_KEY, JSON.stringify(result.user));
-      localStorage.setItem('token_expires_in', String(result.expires_in ?? 7200));
+      try {
+        console.log('[Auth] Attempting localStorage write:', { TOKEN_KEY, REFRESH_KEY, USER_KEY });
+        localStorage.setItem(TOKEN_KEY, newToken);
+        console.log('[Auth] ✓ auth_token stored');
+        localStorage.setItem(REFRESH_KEY, refreshToken);
+        console.log('[Auth] ✓ refresh_token stored');
+        localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+        console.log('[Auth] ✓ auth_user stored');
+        localStorage.setItem('token_expires_in', String(result.expires_in ?? 7200));
+        console.log('[Auth] ✓ token_expires_in stored');
+      } catch (err) {
+        console.error('[Auth] localStorage write failed:', err);
+      }
     }
 
     // Fetch balance after login
@@ -129,7 +162,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const bal = apiClient.wallet.getBalance();
       bal.then((data) => setBalance(data)).catch(() => {/* ignore */});
     } catch { /* ignore */ }
-  }, []);
+
+    // Protect logout for 2s (React StrictMode safety net)
+    _skipNextLogout();
+
+    // Force reload to ensure React re-renders with fresh auth state
+    if (typeof window !== 'undefined') {
+      setTimeout(() => { window.location.reload(); }, 500);
+    }
+  }, [_skipNextLogout]);
 
   const login = useCallback(async (phone: string, code: string): Promise<LoginResult> => {
     const result = await apiClient.auth.loginByCode(phone, code);
@@ -138,7 +179,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [_setSession]);
 
   const loginByPassword = useCallback(async (phone: string, password: string): Promise<LoginResult> => {
+    console.log('[Auth] loginByPassword called for', phone);
     const result = await apiClient.auth.loginByPassword(phone, password);
+    console.log('[Auth] loginByPassword API result ok =', result.ok);
     _setSession(result as LoginResult);
     return result as LoginResult;
   }, [_setSession]);
@@ -155,7 +198,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await apiClient.auth.sendCode(phone);
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback((reason = '') => {
+    // Skip if called within 2s after login (React StrictMode protection)
+    if (Date.now() < skipLogoutUntil.current) {
+      console.warn('[Auth] logout SKIPPED (within 2s protection window) reason:', reason);
+      return;
+    }
+    console.warn('[Auth] ★★★ logout() CALLED reason:', reason, '★★★');
     apiClient.clearAuthToken();
     setToken(null);
     setUser(null);
@@ -167,6 +216,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
   }, []);
+
+  // Ref to skip logout for 2s after login (React StrictMode safety)
+  const skipLogoutUntil = useRef<number>(0);
+  const skipNextLogout = () => { skipLogoutUntil.current = Date.now() + 2000; };
+
+  // Skip logout if it fires within 2s after a login (React StrictMode safety)
+  const skipLogoutTimer = useRef<NodeJS.Timeout | null>(null);
+  const _skipNextLogout = () => {
+    if (skipLogoutTimer.current) clearTimeout(skipLogoutTimer.current);
+    skipLogoutTimer.current = setTimeout(() => { skipLogoutTimer.current = null; }, 2000);
+  };
+  const _shouldSkipLogout = () => skipLogoutTimer.current !== null;
 
   const refetchBalance = useCallback(async () => {
     if (!token) return;

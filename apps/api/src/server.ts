@@ -22,11 +22,14 @@ async function main() {
   const allowedOrigins = env.CORS_ORIGINS.split(',').map(s => s.trim());
   await fastify.register(cors, {
     origin(origin, callback) {
-      // Allow requests with no origin (e.g., mobile apps or curl)
+      // Allow requests with no origin (e.g., curl)
       if (!origin) return callback(null, true);
-      // Check if origin is allowed
+      // Dev mode: allow all origins to avoid CORS issues on changing IPs
+      if (env.NODE_ENV === 'development') {
+        return callback(null, true);
+      }
+      // Production: strict origin check
       if (allowedOrigins.includes(origin)) {
-        // Return the origin when credentials are enabled
         callback(null, origin);
       } else {
         callback(new Error('Not allowed by CORS'), false);
